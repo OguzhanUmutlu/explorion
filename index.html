@@ -1,0 +1,101 @@
+<canvas></canvas>
+<div class="info">
+    <div class="fps"></div>
+    <div class="tps"></div>
+    <div class="pos"></div>
+    <div class="vel"></div>
+    <div class="mouse"></div>
+    <div class="health"></div>
+</div>
+<div class="hotbar">
+    <div class="selected"><img src="assets/grass.png"></div>
+    <div><img src="assets/dirt.png"></div>
+    <div><img src="assets/stone.png"></div>
+    <div><img src="assets/cobblestone.png"></div>
+    <div><img src="assets/bedrock.png"></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+</div>
+<div class="loading-screen">
+    <div>Loading...</div>
+</div>
+<script src="classes.js"></script>
+<script src="perlin.js"></script>
+<script src="main.js"></script>
+<style>
+    * {
+        user-select: none;
+        --INV1: 3px;
+        --INV2: 6px;
+        --INV-PAD: 64px;
+        --INV-COLOR: #b0b0b0;
+        --INV-IMG-PAD: 32px;
+    }
+
+    .info {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        font-family: monospace;
+        font-size: 20px;
+        color: white;
+        background-color: rgba(0, 0, 0, 0.2);
+        padding: 10px;
+    }
+
+    canvas {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+    }
+
+    .loading-screen {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #745e49;
+        color: white;
+        font-size: 20px;
+        font-family: Calibri, serif;
+    }
+
+    .loading-screen > div {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        translate: -50% -50%;
+    }
+
+    .hotbar {
+        position: absolute;
+        left: 50%;
+        bottom: 20px;
+        translate: -50%;
+        display: flex;
+    }
+
+    .hotbar > .selected {
+        --INV-COLOR: #727272;
+    }
+
+    .hotbar > div {
+        border: var(--INV2) var(--INV-COLOR) solid;
+        width: var(--INV-PAD);
+        height: var(--INV-PAD);
+        background-color: rgba(79, 76, 76, 0.5);
+    }
+
+    .hotbar > div > img {
+        width: var(--INV-IMG-PAD);
+        height: var(--INV-IMG-PAD);
+        margin-left: calc(var(--INV-PAD) / 2 - var(--INV-IMG-PAD) / 2);
+        margin-top: calc(var(--INV-PAD) / 2 - var(--INV-IMG-PAD) / 2);
+    }
+</style>
