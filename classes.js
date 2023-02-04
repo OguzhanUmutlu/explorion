@@ -1,3 +1,5 @@
+const {sqrt, floor, ceil, round, sin, cos, atan2, random, PI, min, abs} = Math;
+
 class Vector2 {
     /**
      * @param {number} x
@@ -9,7 +11,7 @@ class Vector2 {
     };
 
     distance(vector) {
-        return Math.sqrt((vector.x - this.x) ** 2 + (vector.y - this.y) ** 2);
+        return sqrt((vector.x - this.x) ** 2 + (vector.y - this.y) ** 2);
     };
 
     add(vector) {
@@ -37,20 +39,20 @@ class Vector2 {
     };
 
     ceil() {
-        this.x = Math.ceil(this.x);
-        this.y = Math.ceil(this.y);
+        this.x = ceil(this.x);
+        this.y = ceil(this.y);
         return this;
     };
 
     floor() {
-        this.x = Math.floor(this.x);
-        this.y = Math.floor(this.y);
+        this.x = floor(this.x);
+        this.y = floor(this.y);
         return this;
     };
 
     round() {
-        this.x = Math.round(this.x);
-        this.y = Math.round(this.y);
+        this.x = round(this.x);
+        this.y = round(this.y);
         return this;
     };
 
@@ -69,11 +71,14 @@ class ChunkGenerator {
             if (!chunk[x]) chunk[x] = {};
             return chunk[x][y];
         };
+        const worldX = chunkX << 4;
+
         for (let x = 0; x < 16; x++) {
+            //const pY = round((Perlin.perlin(worldX + x, 0.1) + 1) * 100);
+            const pY = Math.sin((worldX + x) / 10) * 10 + 20;
+            setBlock(x, pY, 1);
+            for (let y = 1; y < pY; y++) setBlock(x, y, 2);
             setBlock(x, 0, 5);
-            setBlock(x, 1, 2);
-            setBlock(x, 2, 2);
-            setBlock(x, 3, 1);
         }
     };
 }
@@ -119,10 +124,10 @@ class World {
      */
     setBlock(x, y, id) {
         if (y < this.MIN_HEIGHT || y > this.MAX_HEIGHT) return;
-        x = Math.round(x);
-        y = Math.round(y);
+        x = round(x);
+        y = round(y);
         const chunk = this.getChunkAt(x, true);
-        const bX = x >= 0 ? x - ((x >> 4) << 4) : x - ((x >> 4) << 4);
+        const bX = (x % 16 + (x < 0 ? 16 : 0)) % 16;
         let X = chunk[bX];
         if (!id) {
             if (X) delete X[y];
@@ -138,11 +143,11 @@ class World {
      * @return {number}
      */
     getBlockId(x, y) {
-        x = Math.round(x);
-        y = Math.round(y);
+        x = round(x);
+        y = round(y);
         const chunk = this.getChunkAt(x);
         if (!chunk) return 0;
-        const bX = x >= 0 ? x - ((x >> 4) << 4) : x - ((x >> 4) << 4);
+        const bX = (x % 16 + (x < 0 ? 16 : 0)) % 16;
         let X = chunk[bX];
         if (!X) X = chunk[bX] = {};
         return X[y] || 0;
@@ -154,14 +159,17 @@ class World {
      * @return {Block}
      */
     getBlock(x, y) {
-        x = Math.round(x);
-        y = Math.round(y);
+        x = round(x);
+        y = round(y);
         return new Block(x, y, this.getBlockId(x, y), this);
     };
 
     generateChunk(chunkX) {
-        const chunk = this.chunks[chunkX] = {};
-        this.generator.generate(chunk, chunkX);
+        this.generator.generate(this.chunks[chunkX] = {}, chunkX);
+    };
+
+    updateBlocksAround(x, y) {
+        [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].forEach(pos => this.getBlock(x + pos[0], y + pos[1]).update(this));
     };
 }
 
@@ -197,7 +205,7 @@ const blockCollision = new Collision(-.5, -.5, 1, 1);
 
 class Block extends Position {
     /*** @type {Collision[]} */
-    collisions = [blockCollision];
+    collisions = [];
 
     /**
      * @param {number} x
@@ -208,6 +216,41 @@ class Block extends Position {
     constructor(x, y, id, world) {
         super(x, y, world);
         this.id = id;
+        this.updateCollision();
+    };
+
+    updateCollision() {
+        this.collisions = [blockCollision];
+    };
+
+    /**
+     * @param {World} world
+     * @param {Object} extra
+     */
+    update(world, extra = {}) {
+        if (this.id >= 7 && this.id <= 15) {
+            if (extra.break) {
+                // TODO: remove water
+            } else if (!world.getBlockId(this.x, this.y - 1)) {
+                world.setBlock(this.x, this.y - 1, 8);
+                world.getBlock(this.x, this.y - 1).update(world);
+            } else if (this.id !== 15) {
+                [1, -1].forEach(dx => {
+                    if (!world.getBlockId(this.x + dx, this.y)) {
+                        world.setBlock(this.x + dx, this.y, this.id + 1);
+                        world.getBlock(this.x + dx, this.y).update(world);
+                    }
+                });
+            }
+        }
+    };
+
+    get isBreakable() {
+        return !itemInfo.unbreakable.includes(this.id);
+    };
+
+    get isLiquid() {
+        return this.id >= 7 && this.id <= 15;
     };
 }
 
@@ -246,7 +289,7 @@ class Entity extends Position {
     };
 
     /*** @return {[Block, Collision[]][]} */
-    getBlockCollisions(enough = null) {
+    getBlockCollisions(enough = null, phaseables = false) {
         const list = [];
         this.collisions.forEach(collision => {
             const minX = collision.x + this.x - 1;
@@ -256,7 +299,7 @@ class Entity extends Position {
             for (let x = minX; x <= maxX; x++) {
                 for (let y = minY; y <= maxY; y++) {
                     const block = this.world.getBlock(x, y);
-                    if (!block.id) continue;
+                    if (!phaseables && itemInfo.phaseable.includes(block.id)) continue;
                     const collided = block.collisions.filter(collision1 => this.collisions.some(collision2 => collision1.collides(collision2, block, this)));
                     if (collided.length) {
                         list.push([block, collided]);
@@ -269,13 +312,15 @@ class Entity extends Position {
     };
 
     onFallDamage(height) {
-        if (height >= 3.5) {
+        console.log(height)
+        if (height >= 3.5 && !player.getBlockCollisions(null, true).some(i => i[0].isLiquid)) {
+            console.log(player.getBlockCollisions(null, true));
             this.health -= height - 3.5;
         }
     };
 
     get onGround() {
-        const r = this.world.getBlockId(this.x + this.collisions[0].x, this.y - .51) || this.world.getBlockId(this.x + this.collisions[0].x + this.collisions[0].w, this.y - .51);
+        const r = !itemInfo.phaseable.includes(this.world.getBlockId(this.x + this.collisions[0].x, this.y - .51)) || !itemInfo.phaseable.includes(this.world.getBlockId(this.x + this.collisions[0].x + this.collisions[0].w, this.y - .51));
         if (r && !this.wasGround) {
             if (this.maxAirY && this.maxAirY - this.y > 3.5) this.onFallDamage(this.maxAirY - this.y);
             this.maxAirY = this.y;
@@ -288,10 +333,30 @@ class Entity extends Position {
     };
 }
 
+const idTextures = {
+    0: "assets/air.png", 1: "assets/grass.png", 2: "assets/dirt.png", 3: "assets/stone.png",
+    4: "assets/cobblestone.png", 5: "assets/bedrock.png", 6: "assets/apple.png", 7: "assets/water_8.png",
+    8: "assets/water_8.png", 9: "assets/water_7.png", 10: "assets/water_6.png", 11: "assets/water_5.png",
+    12: "assets/water_4.png", 13: "assets/water_3.png", 14: "assets/water_2.png", 15: "assets/water_1.png"
+};
+
+const itemInfo = {
+    block: [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    phaseable: [0, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    unbreakable: [0, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    notPlaceableOn: [0, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    edible: {6: 4},
+    name: {
+        0: "Air", 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Cobblestone", 5: "Bedrock", 6: "Apple", 7: "Source Water",
+        8: "Water", 9: "Flowing Water", 10: "Flowing Water", 11: "Flowing Water", 12: "Flowing Water",
+        13: "Flowing Water", 14: "Flowing Water", 15: "Flowing Water"
+    }
+};
+
 class Item {
     constructor(id, count = 1) {
         this._id = id;
-        if (isNaN(count) || count < 0 || Math.floor(count) !== count) throw new Error("Expected a positive integer for the count of the item. Found: " + JSON.stringify(count));
+        if (isNaN(count) || count < 0 || floor(count) !== count) throw new Error("Expected a positive integer for the count of the item. Found: " + JSON.stringify(count));
         this.count = count;
     };
 
@@ -302,6 +367,22 @@ class Item {
     get id() {
         return this._id;
     };
+
+    get isBlock() {
+        return itemInfo.block.includes(this.id);
+    };
+
+    get isEdible() {
+        return !!itemInfo.edible[this.id];
+    };
+
+    get foodHeal() {
+        return itemInfo.edible[this.id];
+    };
+
+    get name() {
+        return itemInfo.name[this.id] || "Unknown";
+    }
 
     clone() {
         return new Item(this.id, this.count);
@@ -327,30 +408,55 @@ class Inventory {
     /*** @param {Item} item */
     add(item) {
         if (!item.id || !item.count) return;
+        let count = item.count;
         for (let i = 0; i < this.size; i++) {
             const c = this.contents[i];
-            if (c && c.id === item.id && c.count < item.maxCount) c.count += item.count;
-            else if (!c) this.contents[i] = item;
-            else continue;
-            break;
+            if (c && c.id === item.id) {
+                c.count += count;
+                count = 0;
+                if (c.count > item.maxCount) {
+                    count += c.count - item.maxCount;
+                    c.count = item.maxCount;
+                }
+            } else if (!c) {
+                const it = this.contents[i] = new Item(item.id, count);
+                count = 0;
+                if (it.count > item.maxCount) {
+                    count += it.count - item.maxCount;
+                    it.count = item.maxCount;
+                }
+            }
+            if (count === 0) break;
         }
     };
 
-    /*** @param {Item} item */
-    remove(item) {
-        let count = item.count;
+    /**
+     * @param {Item} item
+     * @param {number} count
+     */
+    remove(item, count = item.count) {
         while (count > 0) {
-            const index = this.contents.findIndex(i => i.id === item.id);
+            const index = this.contents.findIndex(i => i && i.id === item.id);
             if (index === -1) break;
             const it = this.contents[index];
             if (it.count <= count) {
                 count -= it.count;
-                it.count = 0
+                delete this.contents[index];
             } else {
                 it.count -= count;
                 count = 0;
             }
         }
+    };
+
+    /**
+     * @param index
+     * @return {Item}
+     */
+    get(index) {
+        const i = this.contents[index];
+        if (!i) return itemPlaceholder;
+        return new Item(i.id, i.count);
     };
 }
 
@@ -360,6 +466,11 @@ class Player extends Entity {
     handIndex = 0;
     inventory = new Inventory(9);
     blockReach = 4;
+    jumpVelocity = .6;
+    holdBreak = false;
+    holdPlace = false;
+    holdEat = false;
+    movementSpeed = 0.2;
 
     /**
      * @param {number} x
@@ -369,12 +480,17 @@ class Player extends Entity {
     constructor(x, y, world) {
         super(x, y, world);
         this.renderPosition.add(this);
-        this.collisions.push(new Collision(-1 / 3, -1 / 2, 2 / 3, this.size));
-        [1, 2, 3, 4, 5].forEach(id => this.inventory.add(new Item(id)));
+        [1, 2, 3, 4, 5, 6, 7].forEach(id => this.inventory.add(new Item(id, 64)));
+        this.fixCollision();
     };
 
+    fixCollision() {
+        this.collisions[0] = new Collision(-1 / 3, -1 / 2, 2 / 3, this.size);
+    };
+
+    /*** @return {Item} */
     get selectedItem() {
-        return this.inventory.contents[this.handIndex];
+        return this.inventory.get(this.handIndex) || itemPlaceholder;
     };
 
     /**
@@ -383,17 +499,17 @@ class Player extends Entity {
      * @return {[Block, Collision[]] | null}
      */
     move(x, y) {
-        const vec = new Vector2(x, y);
+        /*const vec = new Vector2(x, y);
         this.add(vec);
         const collision = this.getBlockCollisions(1)[0];
         if (collision) {
             this.sub(vec);
             return collision;
         }
-        return null;
-        /*const theta = Math.atan2(x - this.x, y - this.y);
-        const vector = new Vector2(Math.sin(theta), Math.cos(theta));
-        const distance = this.distance(new Vector2(x, y));
+        return null;*/
+        const theta = atan2(x, y);
+        const vector = new Vector2(sin(theta), cos(theta));
+        const distance = sqrt(x ** 2 + y ** 2);
         vector.mul(distance / 30);
         for (let i = 0; i < 30; i++) {
             this.add(vector);
@@ -403,15 +519,34 @@ class Player extends Entity {
                 return collision;
             }
         }
-        return null;*/
+        return null;
     };
 
     kill() {
         super.kill();
         this._health = this.maxHealth;
         this.x = 0;
-        this.y = 1;
+        for (let y = this.world.MIN_HEIGHT; y <= this.world.MAX_HEIGHT + 1; y++) {
+            if (!this.world.getBlockId(0, y)) {
+                this.y = y;
+                break;
+            }
+        }
         this.velocity.x = 0;
         this.velocity.y = 0;
+    };
+}
+
+class Texture {
+    image = imagePlaceholder;
+
+    /*** @param {Promise<Image>} promise */
+    constructor(promise) {
+        this._promise = promise;
+        promise.then(image => this.image = image);
+    };
+
+    async wait() {
+        await this._promise;
     };
 }

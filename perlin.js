@@ -1,34 +1,33 @@
 class Perlin {
-    gradients = {};
-    memory = {};
+    static interpolate(a0, a1, w) {
+        return (a1 - a0) * w + a0;
+    };
 
-    static vec() {
+    static randomGradient(ix, iy) {
         const theta = Math.random() * 2 * Math.PI;
-        return {x: Math.cos(theta), y: Math.sin(theta)};
+        return { x: Math.cos(theta), y: Math.sin(theta) };
     };
 
-    dot(x, y, vx, vy) {
-        const vec = this.gradients[[vx, vy]] || Perlin.vec();
-        if (!this.gradients[[vx, vy]]) this.gradients[[vx, vy]] = vec;
-        return (x - vx) * vec.x + (y - vy) * vec.y;
+    static dotGridGradient(ix, iy, x, y) {
+        const gradient = Perlin.randomGradient(ix, iy);
+        return ((x - ix) * gradient.x + (y - iy) * gradient.y);
     };
 
-    static interpolate(x, a, b) {
-        return a + 6 * x ** 5 - 15 * x ** 4 + 10 * x ** 3 * (b - a);
-    };
-
-    get(x, y) {
-        if (this.memory[[x, y]]) return this.memory[[x, y]];
-        let xf = Math.floor(x);
-        let yf = Math.floor(y);
-        let tl = this.dot(x, y, xf, yf);
-        let tr = this.dot(x, y, xf + 1, yf);
-        let bl = this.dot(x, y, xf, yf + 1);
-        let br = this.dot(x, y, xf + 1, yf + 1);
-        let xt = Perlin.interpolate(x - xf, tl, tr);
-        let xb = Perlin.interpolate(x - xf, bl, br);
-        let v = Perlin.interpolate(y - yf, xt, xb);
-        this.memory[[x, y]] = v;
-        return v;
+    static perlin(x, y) {
+        const x0 = floor(x);
+        const x1 = x0 + 1;
+        const y0 = floor(y);
+        const y1 = y0 + 1;
+        const sx = x - x0;
+        const sy = y - y0;
+        let n0, n1, ix0, ix1, value;
+        n0 = Perlin.dotGridGradient(x0, y0, x, y);
+        n1 = Perlin.dotGridGradient(x1, y0, x, y);
+        ix0 = Perlin.interpolate(n0, n1, sx);
+        n0 = Perlin.dotGridGradient(x0, y1, x, y);
+        n1 = Perlin.dotGridGradient(x1, y1, x, y);
+        ix1 = Perlin.interpolate(n0, n1, sx);
+        value = Perlin.interpolate(ix0, ix1, sy);
+        return value;
     };
 }

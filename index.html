@@ -2,27 +2,47 @@
 <div class="info">
     <div class="fps"></div>
     <div class="tps"></div>
+    <div class="ups"></div>
     <div class="pos"></div>
     <div class="vel"></div>
     <div class="mouse"></div>
-    <div class="health"></div>
 </div>
+<div class="actionbar"></div>
 <div class="hotbar">
-    <div class="selected"><img src="assets/grass.png"></div>
-    <div><img src="assets/dirt.png"></div>
-    <div><img src="assets/stone.png"></div>
-    <div><img src="assets/cobblestone.png"></div>
-    <div><img src="assets/bedrock.png"></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
+    <div class="selected"><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+    </div>
 </div>
+<div class="health"></div>
 <div class="loading-screen">
     <div>Loading...</div>
 </div>
-<script src="classes.js"></script>
 <script src="perlin.js"></script>
+<script src="classes.js"></script>
 <script src="main.js"></script>
 <style>
     * {
@@ -31,7 +51,14 @@
         --INV2: 6px;
         --INV-PAD: 64px;
         --INV-COLOR: #b0b0b0;
-        --INV-IMG-PAD: 32px;
+        --INV-IMG-PAD: 40px;
+        image-rendering: optimizeSpeed;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: -o-crisp-edges;
+        image-rendering: pixelated;
+        -ms-interpolation-mode: nearest-neighbor;
+        font-family: monospace, serif;
     }
 
     .info {
@@ -79,6 +106,7 @@
         bottom: 20px;
         translate: -50%;
         display: flex;
+        pointer-events: none;
     }
 
     .hotbar > .selected {
@@ -97,5 +125,34 @@
         height: var(--INV-IMG-PAD);
         margin-left: calc(var(--INV-PAD) / 2 - var(--INV-IMG-PAD) / 2);
         margin-top: calc(var(--INV-PAD) / 2 - var(--INV-IMG-PAD) / 2);
+    }
+
+    .hotbar > div > div {
+        color: white;
+        margin-top: calc(1px - var(--INV2));
+        text-align: right;
+    }
+
+    .actionbar {
+        position: absolute;
+        left: 50%;
+        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px);
+        translate: -50%;
+        display: flex;
+        pointer-events: none;
+        color: white;
+    }
+
+    .health {
+        position: absolute;
+        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px);
+        left: 50%;
+        translate: calc(10px - var(--INV-PAD) / 2 - var(--INV-PAD) * 4 - var(--INV2) * 8);
+        pointer-events: none;
+    }
+
+    .health > div > img {
+        width: 32px;
+        margin: -5px;
     }
 </style>
