@@ -207,8 +207,10 @@ setInterval(() => {
     _tps.push([Date.now(), deltaTick]);
     lastUpdate = Date.now();
     time += deltaTick;
-    if (!player.onGround) player.velocity.y -= 0.1 * deltaTick;
-    player.velocity.y -= player.velocity.y * 0.1 * deltaTick;
+    if (!player.isFlying) {
+        if (!player.onGround) player.velocity.y -= 0.1 * deltaTick;
+        player.velocity.y -= player.velocity.y * 0.1 * deltaTick;
+    }
     if (player.y <= -128) {
         player.y = -128;
         player.velocity.y = 0;
@@ -231,7 +233,12 @@ setInterval(() => {
         if (!player.world.chunks[x]) player.world.generateChunk(x);
     if (pressingKeys["d"]) player.move(player.movementSpeed * deltaTick, 0);
     if (pressingKeys["a"]) player.move(-player.movementSpeed * deltaTick, 0);
-    if ((pressingKeys["w"] || pressingKeys[" "]) && player.onGround) player.velocity.y = player.jumpVelocity;
+    if (player.isFlying) {
+        if (pressingKeys["w"] || pressingKeys[" "]) player.move(0, player.movementSpeed * deltaTick);
+        if (pressingKeys["s"]) player.move(0, -player.movementSpeed * deltaTick);
+    } else {
+        if ((pressingKeys["w"] || pressingKeys[" "]) && player.onGround) player.velocity.y = player.jumpVelocity;
+    }
 
     const block = player.world.getBlock(worldMouse.x * 1, worldMouse.y * 1);
     if (pressingButtons[0] && block.id) {

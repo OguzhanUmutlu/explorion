@@ -312,9 +312,7 @@ class Entity extends Position {
     };
 
     onFallDamage(height) {
-        console.log(height)
         if (height >= 3.5 && !player.getBlockCollisions(null, true).some(i => i[0].isLiquid)) {
-            console.log(player.getBlockCollisions(null, true));
             this.health -= height - 3.5;
         }
     };
@@ -471,6 +469,7 @@ class Player extends Entity {
     holdPlace = false;
     holdEat = false;
     movementSpeed = 0.2;
+    isFlying = false;
 
     /**
      * @param {number} x
