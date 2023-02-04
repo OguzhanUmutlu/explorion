@@ -491,12 +491,13 @@ class Player extends Entity {
 
     set mode(v) {
         this._mode = v;
-        this.invincible = v === 1;
+        this.invincible = v % 2 === 1;
         this.holdBreak = v === 1;
         this.holdPlace = v === 1;
         this.holdEat = v === 1;
-        this.movementSpeed = v === 1 ? 0.5 : 0.2;
+        this.movementSpeed = [0.2, 0.5, 0.2, 0.7][v];
         this.blockReach = v === 1 ? 10 : 4;
+        this.isFlying = v === 3;
     }
 
     fixCollision() {

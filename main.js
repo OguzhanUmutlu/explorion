@@ -94,7 +94,7 @@ const animate = () => {
             node.children[0].src = idTextures[item.id] || idTextures[0];
             node.children[1].innerHTML = item.count ? item.count.toString() : "";
         });
-        document.querySelector(".health").style.display = player.mode === 0 ? "" : "none";
+        document.querySelector(".health").style.display = player.mode % 2 === 0 ? "" : "none";
         if (lastHealth !== player.health || lastMaxHealth !== player.maxHealth) {
             lastHealth = player.health;
             lastMaxHealth = player.maxHealth;
@@ -156,24 +156,26 @@ const animate = () => {
         }
         const hoverVector = new Vector2(worldMouse.x * 1, worldMouse.y * 1).round();
         const hoverId = player.world.getBlockId(hoverVector.x, hoverVector.y);
-        if (
-            !itemInfo.phaseable.includes(hoverId) &&
-            (!itemInfo.unbreakable.includes(hoverId) || player.mode === 1) &&
-            player.distance(hoverVector) <= player.blockReach
-        ) renderBlock(hoverVector.x, hoverVector.y, true);
-        else if (
-            player.selectedItem.id &&
-            itemInfo.phaseable.includes(hoverId) &&
-            hoverVector.y >= player.world.MIN_HEIGHT &&
-            hoverVector.y <= player.world.MAX_HEIGHT &&
-            player.distance(hoverVector) <= player.blockReach &&
-            (
-                !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x, hoverVector.y + 1)) ||
-                !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x, hoverVector.y - 1)) ||
-                !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x + 1, hoverVector.y)) ||
-                !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x - 1, hoverVector.y))
-            )
-        ) renderBlock(hoverVector.x, hoverVector.y, true);
+        if (player.mode < 2) {
+            if (
+                !itemInfo.phaseable.includes(hoverId) &&
+                (!itemInfo.unbreakable.includes(hoverId) || player.mode % 2 === 1) &&
+                player.distance(hoverVector) <= player.blockReach
+            ) renderBlock(hoverVector.x, hoverVector.y, true);
+            else if (
+                player.selectedItem.id &&
+                itemInfo.phaseable.includes(hoverId) &&
+                hoverVector.y >= player.world.MIN_HEIGHT &&
+                hoverVector.y <= player.world.MAX_HEIGHT &&
+                player.distance(hoverVector) <= player.blockReach &&
+                (
+                    !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x, hoverVector.y + 1)) ||
+                    !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x, hoverVector.y - 1)) ||
+                    !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x + 1, hoverVector.y)) ||
+                    !itemInfo.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x - 1, hoverVector.y))
+                )
+            ) renderBlock(hoverVector.x, hoverVector.y, true);
+        }
         ctx.fillStyle = "red";
         ctx.fillRect(canvas.width / 2 - 2, canvas.height / 2 - 2, 4, 4);
         ctx.strokeStyle = "black";
@@ -216,39 +218,48 @@ setInterval(() => {
         player.y = -128;
         player.velocity.y = 0;
     }
-    const c1 = player.move(player.velocity.x * min(deltaTick, 2), 0);
-    if (c1) {
-        player.x = (player.velocity.x < 0 ? 1 : -1) * c1[1][0].w + c1[0].x;
-        player.velocity.x = 0;
+    if(player.mode !== 3) {
+        const c1 = player.move(player.velocity.x * min(deltaTick, 2), 0);
+        if (c1) {
+            player.x = (player.velocity.x < 0 ? 1 : -1) * c1[1][0].w + c1[0].x;
+            player.velocity.x = 0;
+        }
+        const c2 = player.move(0, player.velocity.y * min(deltaTick, 2));
+        if (c2) {
+            player.y = (player.velocity.y < 0 ? 1 : -1) * c2[1][0].h + c2[0].y + (player.velocity.y >= 0 ? 1 - player.size : 0);
+            player.velocity.y = 0;
+        }
+        player.add(player.motion.clone().div(10));
+        player.motion.mul(.9);
     }
-    const c2 = player.move(0, player.velocity.y * min(deltaTick, 2));
-    if (c2) {
-        player.y = (player.velocity.y < 0 ? 1 : -1) * c2[1][0].h + c2[0].y + (player.velocity.y >= 0 ? 1 - player.size : 0);
-        player.velocity.y = 0;
-    }
-    player.add(player.motion.clone().div(10));
-    player.motion.mul(.9);
     if (player.y < -10) player.health -= 0.5 * deltaTick;
     const playerChunkX = player.world.getChunkIdAt(player.x);
     for (let x = playerChunkX - UPDATE_DISTANCE; x <= playerChunkX + UPDATE_DISTANCE; x++)
         if (!player.world.chunks[x]) player.world.generateChunk(x);
-    if (pressingKeys["d"]) player.move(player.movementSpeed * deltaTick, 0);
-    if (pressingKeys["a"]) player.move(-player.movementSpeed * deltaTick, 0);
-    if (player.isFlying) {
-        if (pressingKeys["w"] || pressingKeys[" "]) player.move(0, player.movementSpeed * deltaTick);
-        if (pressingKeys["s"]) player.move(0, -player.movementSpeed * deltaTick);
+    if (player.mode === 3) {
+        if (pressingKeys["d"]) player.x += player.movementSpeed * deltaTick;
+        if (pressingKeys["a"]) player.x -= player.movementSpeed * deltaTick;
+        if (pressingKeys["w"]) player.y += player.movementSpeed * deltaTick;
+        if (pressingKeys["s"]) player.y -= player.movementSpeed * deltaTick;
     } else {
-        if ((pressingKeys["w"] || pressingKeys[" "]) && player.onGround) player.velocity.y = player.jumpVelocity;
+        if (pressingKeys["d"]) player.move(player.movementSpeed * deltaTick, 0);
+        if (pressingKeys["a"]) player.move(-player.movementSpeed * deltaTick, 0);
+        if (player.isFlying) {
+            if (pressingKeys["w"] || pressingKeys[" "]) player.move(0, player.movementSpeed * deltaTick);
+            if (pressingKeys["s"]) player.move(0, -player.movementSpeed * deltaTick);
+        } else {
+            if ((pressingKeys["w"] || pressingKeys[" "]) && player.onGround) player.velocity.y = player.jumpVelocity;
+        }
     }
 
     const block = player.world.getBlock(worldMouse.x * 1, worldMouse.y * 1);
-    if (pressingButtons[0] && block.id) {
+    if (pressingButtons[0] && block.id && player.mode < 2) {
         if (!player.holdBreak) pressingButtons[0] = false;
         if (
             player.distance(block) <= player.blockReach &&
-            (block.isBreakable || player.mode === 1)
+            (block.isBreakable || player.mode % 2 === 1)
         ) {
-            if (player.mode !== 1) player.inventory.add(new Item(block.id));
+            if (player.mode % 2 === 0) player.inventory.add(new Item(block.id));
             player.world.setBlock(block.x, block.y, 0);
             player.world.updateBlocksAround(block.x, block.y);
         }
@@ -258,6 +269,7 @@ setInterval(() => {
         if (selectedItem.isBlock) {
             if (!player.holdPlace) pressingButtons[2] = false;
             if (
+                player.mode < 2 &&
                 itemInfo.phaseable.includes(block.id) &&
                 selectedItem.id && selectedItem.isBlock &&
                 player.distance(block) <= player.blockReach &&
@@ -272,7 +284,7 @@ setInterval(() => {
                 player.world.setBlock(block.x, block.y, selectedItem.id);
                 if (block.id === 7) block.update(player.world, {break: true}); // source block
                 player.world.updateBlocksAround(block.x, block.y);
-                if (player.mode !== 1) {
+                if (player.mode % 2 === 0) {
                     const it = player.inventory.contents[player.handIndex];
                     it.count--;
                     if (it.count <= 0) delete player.inventory.contents[player.handIndex];
@@ -282,7 +294,7 @@ setInterval(() => {
             if (!player.holdEat) pressingButtons[2] = false;
             if (player.health === player.maxHealth) return;
             player.health += selectedItem.foodHeal;
-            if (player.mode !== 1) player.inventory.remove(selectedItem, 1);
+            if (player.mode % 2 === 0) player.inventory.remove(selectedItem, 1);
         }
     }
 });
