@@ -296,9 +296,7 @@ addEventListener("keydown", ev => {
 addEventListener("keyup", ev => {
     delete pressingKeys[ev.key.toLowerCase()];
     if (ev.key === " ") {
-        console.log("test")
         if (lastSpace + 300 > Date.now() && player.mode === 1) {
-            console.log("a")
             player.isFlying = !player.isFlying;
             player.velocity.y = 0;
         }
