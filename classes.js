@@ -265,6 +265,7 @@ class Entity extends Position {
     wasGround = false;
     _health = 20;
     maxHealth = 20;
+    invincible = false;
 
     /**
      * @param {number} x
@@ -280,7 +281,7 @@ class Entity extends Position {
     };
 
     set health(v) {
-        this._health = v;
+        if (!this.invincible) this._health = v;
         if (this._health > this.maxHealth) this._health = this.maxHealth;
         if (this._health <= 0) {
             this._health = 0;
@@ -470,6 +471,7 @@ class Player extends Entity {
     holdEat = false;
     movementSpeed = 0.2;
     isFlying = false;
+    _mode = 0;
 
     /**
      * @param {number} x
@@ -482,6 +484,20 @@ class Player extends Entity {
         [1, 2, 3, 4, 5, 6, 7].forEach(id => this.inventory.add(new Item(id, 64)));
         this.fixCollision();
     };
+
+    get mode() {
+        return this._mode;
+    };
+
+    set mode(v) {
+        this._mode = v;
+        this.invincible = v === 1;
+        this.holdBreak = v === 1;
+        this.holdPlace = v === 1;
+        this.holdEat = v === 1;
+        this.movementSpeed = v === 1 ? 0.5 : 0.2;
+        this.blockReach = v === 1 ? 10 : 4;
+    }
 
     fixCollision() {
         this.collisions[0] = new Collision(-1 / 3, -1 / 2, 2 / 3, this.size);
@@ -522,6 +538,7 @@ class Player extends Entity {
     };
 
     kill() {
+        if (this.invincible) return;
         super.kill();
         this._health = this.maxHealth;
         this.x = 0;

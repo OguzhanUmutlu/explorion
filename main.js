@@ -94,6 +94,7 @@ const animate = () => {
             node.children[0].src = idTextures[item.id] || idTextures[0];
             node.children[1].innerHTML = item.count ? item.count.toString() : "";
         });
+        document.querySelector(".health").style.display = player.mode === 0 ? "" : "none";
         if (lastHealth !== player.health || lastMaxHealth !== player.maxHealth) {
             lastHealth = player.health;
             lastMaxHealth = player.maxHealth;
@@ -157,7 +158,7 @@ const animate = () => {
         const hoverId = player.world.getBlockId(hoverVector.x, hoverVector.y);
         if (
             !itemInfo.phaseable.includes(hoverId) &&
-            !itemInfo.unbreakable.includes(hoverId) &&
+            (!itemInfo.unbreakable.includes(hoverId) || player.mode === 1) &&
             player.distance(hoverVector) <= player.blockReach
         ) renderBlock(hoverVector.x, hoverVector.y, true);
         else if (
@@ -245,9 +246,9 @@ setInterval(() => {
         if (!player.holdBreak) pressingButtons[0] = false;
         if (
             player.distance(block) <= player.blockReach &&
-            block.isBreakable
+            (block.isBreakable || player.mode === 1)
         ) {
-            player.inventory.add(new Item(block.id));
+            if (player.mode !== 1) player.inventory.add(new Item(block.id));
             player.world.setBlock(block.x, block.y, 0);
             player.world.updateBlocksAround(block.x, block.y);
         }
@@ -271,24 +272,39 @@ setInterval(() => {
                 player.world.setBlock(block.x, block.y, selectedItem.id);
                 if (block.id === 7) block.update(player.world, {break: true}); // source block
                 player.world.updateBlocksAround(block.x, block.y);
-                const it = player.inventory.contents[player.handIndex];
-                it.count--;
-                if (it.count <= 0) delete player.inventory.contents[player.handIndex];
+                if (player.mode !== 1) {
+                    const it = player.inventory.contents[player.handIndex];
+                    it.count--;
+                    if (it.count <= 0) delete player.inventory.contents[player.handIndex];
+                }
             }
         } else if (selectedItem.isEdible) {
             if (!player.holdEat) pressingButtons[2] = false;
             if (player.health === player.maxHealth) return;
             player.health += selectedItem.foodHeal;
-            player.inventory.remove(selectedItem, 1);
+            if (player.mode !== 1) player.inventory.remove(selectedItem, 1);
         }
     }
 });
+
+let lastSpace = Date.now();
 
 addEventListener("keydown", ev => {
     if ([..."123456789"].includes(ev.key)) player.handIndex = ev.key - 1;
     pressingKeys[ev.key.toLowerCase()] = true;
 });
-addEventListener("keyup", ev => delete pressingKeys[ev.key.toLowerCase()]);
+addEventListener("keyup", ev => {
+    delete pressingKeys[ev.key.toLowerCase()];
+    if (ev.key === " ") {
+        console.log("test")
+        if (lastSpace + 300 > Date.now() && player.mode === 1) {
+            console.log("a")
+            player.isFlying = !player.isFlying;
+            player.velocity.y = 0;
+        }
+        lastSpace = Date.now();
+    }
+});
 addEventListener("blur", () => {
     pressingKeys = {};
     actualMouse.x = -BLOCK_SIZE;

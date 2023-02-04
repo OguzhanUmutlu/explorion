@@ -16,7 +16,7 @@ Explorion - Block Game
 - [ ] Online mode
 - [ ] UI
 - [ ] Saving world
-- [ ] Game modes
+- [X] Game modes
 - [ ] Chat
 - [ ] Effects: Speed, jump boost, haste, mining fatigue
 - [ ] Enchants: Efficiency
