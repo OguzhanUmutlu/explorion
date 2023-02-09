@@ -367,7 +367,8 @@ texturePromise.then(() => {
 });
 
 addEventListener("wheel", ev => {
-    const zoom = ev.deltaY / 100;
+    if (!ev.deltaY) return;
+    const zoom = ev.deltaY > 0 ? 1 : -1;
     player.handIndex += zoom;
     if (player.handIndex >= 9) player.handIndex = 0;
     if (player.handIndex <= -1) player.handIndex = 8;
