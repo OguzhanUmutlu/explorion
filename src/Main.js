@@ -130,11 +130,14 @@ const animate = () => {
                 "<div>" + new Array(10).fill(0).map((_, i) => {
                     const req = ((9 - i) + 1) * 2;
                     if (renderFood >= req) {
-                        return `<img src="../assets/gui/food.png" draggable="false">`;
+                        // noinspection HtmlUnknownTarget
+                        return `<img src="assets/gui/food.png" draggable="false">`;
                     } else if (renderFood >= req - 1) {
-                        return `<img src="../assets/gui/half_food.png" draggable="false">`;
+                        // noinspection HtmlUnknownTarget
+                        return `<img src="assets/gui/half_food.png" draggable="false">`;
                     } else {
-                        return `<img src="../assets/gui/empty_food.png" draggable="false">`;
+                        // noinspection HtmlUnknownTarget
+                        return `<img src="assets/gui/empty_food.png" draggable="false">`;
                     }
                 }).join("") + "</div>";
         }
@@ -148,9 +151,14 @@ const animate = () => {
                     const req = (9 - i) + 1;
                     const next = (9 - (i + 1)) + 1;
                     if (renderBubble >= req) {
-                        return `<img src="../assets/gui/bubble.png" draggable="false">`;
-                    } else if (i !== 9 && renderBubble >= next ? drownAddition : "") return `<img src="../assets/gui/bubble_pop.png" draggable="false">`;
-                    return `<img src="../assets/blocks/air.png" draggable="false">`;
+                        // noinspection HtmlUnknownTarget
+                        return `<img src="assets/gui/bubble.png" draggable="false">`;
+                    } else if (i !== 9 && renderBubble >= next ? drownAddition : "") {
+                        // noinspection HtmlUnknownTarget
+                        return `<img src="assets/gui/bubble_pop.png" draggable="false">`;
+                    }
+                    // noinspection HtmlUnknownTarget
+                    return `<img src="assets/blocks/air.png" draggable="false">`;
                 }).join("") + "</div>";
         }
         canvas.width = innerWidth;
