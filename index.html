@@ -1,5 +1,5 @@
 <canvas></canvas>
-<div class="info">
+<div class="info" style="display: none">
     <div class="fps"></div>
     <div class="tps"></div>
     <div class="ups"></div>
@@ -11,40 +11,75 @@
 <div class="hotbar">
     <div class="selected"><img src="" draggable="false">
         <div></div>
-    </div>
-    <div><img src="" draggable="false">
         <div></div>
     </div>
     <div><img src="" draggable="false">
         <div></div>
-    </div>
-    <div><img src="" draggable="false">
         <div></div>
     </div>
     <div><img src="" draggable="false">
         <div></div>
-    </div>
-    <div><img src="" draggable="false">
         <div></div>
     </div>
     <div><img src="" draggable="false">
         <div></div>
-    </div>
-    <div><img src="" draggable="false">
         <div></div>
     </div>
     <div><img src="" draggable="false">
+        <div></div>
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
+        <div></div>
+    </div>
+    <div><img src="" draggable="false">
+        <div></div>
         <div></div>
     </div>
 </div>
 <div class="health"></div>
+<div class="food"></div>
+<div class="bubble"></div>
 <div class="loading-screen">
     <div>Loading...</div>
 </div>
-<script src="perlin.js"></script>
-<script src="classes.js"></script>
-<script src="main.js"></script>
+<div class="hurt-effect"></div>
+<script src="src/Utils.js"></script>
+<script src="src/Vector.js"></script>
+<script src="src/world/ChunkGenerator.js"></script>
+<script src="src/world/World.js"></script>
+<script src="src/world/Position.js"></script>
+<script src="src/entity/Particle.js"></script>
+<script src="src/Collision.js"></script>
+<script src="src/world/CollideablePosition.js"></script>
+<script src="src/world/Block.js"></script>
+<script src="src/entity/Entity.js"></script>
+<script src="src/entity/Living.js"></script>
+<script src="src/entity/Mob.js"></script>
+<script src="src/item/Item.js"></script>
+<script src="src/item/Inventory.js"></script>
+<script src="src/item/ItemFactory.js"></script>
+<script src="src/Texture.js"></script>
+<script src="src/entity/types/CowEntity.js"></script>
+<script src="src/entity/types/TNTEntity.js"></script>
+<script src="src/entity/types/ItemEntity.js"></script>
+<script src="src/entity/types/FallingBlockEntity.js"></script>
+<script src="src/entity/types/Player.js"></script>
+<script src="src/entity/Tile.js"></script>
+<script src="src/entity/EntityFactory.js"></script>
+<script src="src/algorithm/PerlinNoise.js"></script>
+<script src="src/Main.js"></script>
 <style>
+    /*noinspection CssInvalidPropertyValue*/
     * {
         user-select: none;
         --INV1: 3px;
@@ -59,6 +94,10 @@
         image-rendering: pixelated;
         -ms-interpolation-mode: nearest-neighbor;
         font-family: monospace, serif;
+    }
+
+    body {
+        overflow: hidden;
     }
 
     .info {
@@ -127,10 +166,17 @@
         margin-top: calc(var(--INV-PAD) / 2 - var(--INV-IMG-PAD) / 2);
     }
 
-    .hotbar > div > div {
+    .hotbar > div > div:nth-child(2) {
         color: white;
         margin-top: calc(1px - var(--INV2));
         text-align: right;
+    }
+
+    .hotbar > div > div:nth-child(3) {
+        color: red;
+        margin-top: calc(1px - var(--INV2));
+        text-align: right;
+        background-color: lawngreen;
     }
 
     .actionbar {
@@ -154,5 +200,39 @@
     .health > div > img {
         width: 32px;
         margin: -5px;
+    }
+
+    .hurt-effect {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        filter: dropShadow(1px 1px 1px black);
+    }
+
+    .food {
+        position: absolute;
+        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px);
+        left: 50%;
+        translate: calc(var(--INV-PAD) / 2 + var(--INV-PAD) * 4 + var(--INV2) * 8 - 190px);
+        pointer-events: none;
+    }
+
+    .food > div > img {
+        width: 32px;
+        margin: -7px;
+    }
+
+    .bubble {
+        position: absolute;
+        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px + 22px);
+        left: 50%;
+        translate: calc(var(--INV-PAD) / 2 + var(--INV-PAD) * 4 + var(--INV2) * 8 - 190px - 2px);
+        pointer-events: none;
+    }
+
+    .bubble > div > img {
+        width: 18px;
     }
 </style>
