@@ -1,5 +1,11 @@
 class CowEntity extends Mob {
     static DEF_COLLISION = new Collision(-.45, -.45, .9, .9);
+    static DEF_HITBOXES = [
+        new Collision(0, .45, .3, .4), // head
+        new Collision(-.47, .15, .94, .6), // body
+        new Collision(-.47, -.45, .21, .6), // left leg
+        new Collision(.26, -.45, .21, .6) // right leg
+    ];
     behaviors = [
         new EscapeWhenHitBehavior(this)
     ];
@@ -30,12 +36,7 @@ class CowEntity extends Mob {
     init() {
         super.init();
         this.collision = CowEntity.DEF_COLLISION;
-        this.hitboxes.push(
-            new Collision(0, .45, .3, .4), // head
-            new Collision(-.47, .15, .94, .6), // body
-            new Collision(-.47, -.45, .21, .6), // left leg
-            new Collision(.26, -.45, .21, .6) // right leg
-        );
+        this.hitboxes.push(...CowEntity.DEF_HITBOXES);
     };
 
     render() {
