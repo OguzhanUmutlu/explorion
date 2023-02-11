@@ -10,7 +10,8 @@ class Player extends Living {
     holdEat = false;
     starveTicks = 0;
     _boundedItems = [];
-    skin = "assets/entities/steve.png";
+    static DEFAULT_SKIN = "assets/entities/steve.png";
+    skin = Player.DEFAULT_SKIN;
 
     /*** @return {Object} */
     get DEFAULT_NBT() {

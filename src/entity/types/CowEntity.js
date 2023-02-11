@@ -8,7 +8,8 @@ class CowEntity extends Mob {
     _health = 10;
     maxHealth = 10;
     movementSpeed = 0.01;
-    skin = "assets/entities/cow.png";
+    static DEFAULT_SKIN = "assets/entities/cow.png";
+    skin = CowEntity.DEFAULT_SKIN;
 
     /*** @return {Object} */
     get DEFAULT_NBT() {
