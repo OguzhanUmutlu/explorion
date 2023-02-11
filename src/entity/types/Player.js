@@ -11,7 +11,6 @@ class Player extends Living {
     starveTicks = 0;
     _boundedItems = [];
     static DEFAULT_SKIN = "assets/entities/steve.png";
-    skin = Player.DEFAULT_SKIN;
 
     /*** @return {Object} */
     get DEFAULT_NBT() {
@@ -138,7 +137,7 @@ class Player extends Living {
     };
 
     render() {
-        const skin = Texture.get(this.skin);
+        const skin = Texture.get(Player.DEFAULT_SKIN);
         ctx.drawImage(
             this.direction ? skin.image : skin.flip(), calcRenderX(this.x + (this.direction ? -.25 : .25)), calcRenderY(this.y + this.size - .5),
             (this.direction ? 1 : -1) * skin.image.width / skin.image.height * this.size * BLOCK_SIZE, this.size * BLOCK_SIZE

@@ -15,7 +15,6 @@ class CowEntity extends Mob {
     maxHealth = 10;
     movementSpeed = 0.01;
     static DEFAULT_SKIN = "assets/entities/cow.png";
-    skin = CowEntity.DEFAULT_SKIN;
 
     /*** @return {Object} */
     get DEFAULT_NBT() {
@@ -40,7 +39,7 @@ class CowEntity extends Mob {
     };
 
     render() {
-        const skin = Texture.get(this.skin);
+        const skin = Texture.get(CowEntity.DEFAULT_SKIN);
         const size = 1.3;
         ctx.drawImage(
             this.direction ? skin.image : skin.flip(),
