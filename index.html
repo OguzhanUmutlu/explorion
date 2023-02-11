@@ -1,4 +1,6 @@
-<canvas></canvas>
+<title>Explorion</title>
+<canvas class="game"></canvas>
+<div class="game_top"></div>
 <div class="info" style="display: none">
     <div class="fps"></div>
     <div class="tps"></div>
@@ -6,6 +8,8 @@
     <div class="pos"></div>
     <div class="vel"></div>
     <div class="mouse"></div>
+    <div class="ent"></div>
+    <div class="tim"></div>
 </div>
 <div class="actionbar"></div>
 <div class="hotbar">
@@ -49,11 +53,19 @@
 <div class="health"></div>
 <div class="food"></div>
 <div class="bubble"></div>
+<!--<div class="open_container">
+
+</div>-->
 <div class="loading-screen">
-    <div>Loading...</div>
+    <div>
+        <canvas class="loading-percent" width="400" height="60"></canvas>
+    </div>
 </div>
-<div class="hurt-effect"></div>
+<script src="src/PreloadAssets.js"></script>
+<script src="src/entity/behavior/Behavior.js"></script>
+<script src="src/entity/behavior/EscapeWhenHitBehavior.js"></script>
 <script src="src/Utils.js"></script>
+<script src="src/Color.js"></script>
 <script src="src/Vector.js"></script>
 <script src="src/world/ChunkGenerator.js"></script>
 <script src="src/world/World.js"></script>
@@ -69,6 +81,7 @@
 <script src="src/item/Inventory.js"></script>
 <script src="src/item/ItemFactory.js"></script>
 <script src="src/Texture.js"></script>
+<script src="src/Sound.js"></script>
 <script src="src/entity/types/CowEntity.js"></script>
 <script src="src/entity/types/TNTEntity.js"></script>
 <script src="src/entity/types/ItemEntity.js"></script>
@@ -79,16 +92,19 @@
 <script src="src/algorithm/PerlinNoise.js"></script>
 <script src="src/Main.js"></script>
 <style>
-    /*noinspection CssInvalidPropertyValue*/
-    * {
-        user-select: none;
+    :root {
         --INV1: 3px;
-        --INV2: 6px;
+        --INV2: 2px;
         --INV-PAD: 64px;
         --INV-COLOR: #b0b0b0;
-        --INV-IMG-PAD: 40px;
+        --INV-IMG-PAD: 32px;
+    }
+
+    * {
+        user-select: none;
         image-rendering: optimizeSpeed;
         image-rendering: -moz-crisp-edges;
+        /*noinspection CssInvalidPropertyValue*/
         image-rendering: -webkit-optimize-contrast;
         image-rendering: -o-crisp-edges;
         image-rendering: pixelated;
@@ -111,7 +127,16 @@
         padding: 10px;
     }
 
-    canvas {
+    .game_top {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .game {
         position: absolute;
         left: 0;
         top: 0;
@@ -139,24 +164,77 @@
         translate: -50% -50%;
     }
 
+    .loading-percent {
+        border: 3px solid black;
+        background-color: rgba(128, 128, 128, 0.5);
+    }
+
+    .actionbar {
+        position: absolute;
+        left: 50%;
+        bottom: calc(var(--INV2) * 2 + var(--INV-PAD) + 10px);
+        translate: -50%;
+        display: flex;
+        pointer-events: none;
+        color: white;
+    }
+
+    .health {
+        position: absolute;
+        bottom: calc(var(--INV2) * 2 + var(--INV-PAD) + 10px);
+        left: 50%;
+        translate: calc(10px - var(--INV-PAD) / 2 - var(--INV-PAD) * 4);
+        pointer-events: none;
+    }
+
+    .health > div > img {
+        width: 31px;
+        margin: -5px;
+    }
+
+    .food {
+        position: absolute;
+        bottom: calc(var(--INV2) * 2 + var(--INV-PAD) + 10px);
+        left: 50%;
+        translate: calc(var(--INV-PAD) / 2 + var(--INV-PAD) * 4 - 190px);
+        pointer-events: none;
+    }
+
+    .food > div > img {
+        width: 32px;
+        margin: -7px;
+    }
+
+    .bubble {
+        position: absolute;
+        bottom: calc(var(--INV2) * 2 + var(--INV-PAD) + 10px + 22px);
+        left: 50%;
+        translate: calc(var(--INV-PAD) / 2 + var(--INV-PAD) * 4 - 190px - 2px);
+        pointer-events: none;
+    }
+
+    .bubble > div > img {
+        width: 18px;
+    }
+
     .hotbar {
         position: absolute;
         left: 50%;
-        bottom: 20px;
+        bottom: 0;
         translate: -50%;
         display: flex;
         pointer-events: none;
     }
 
     .hotbar > .selected {
-        --INV-COLOR: #727272;
+        background-image: url("./assets/gui/selected_hotbar.png");
     }
 
     .hotbar > div {
-        border: var(--INV2) var(--INV-COLOR) solid;
         width: var(--INV-PAD);
         height: var(--INV-PAD);
-        background-color: rgba(79, 76, 76, 0.5);
+        background: url("./assets/gui/hotbar.png") no-repeat;
+        background-size: var(--INV-PAD) var(--INV-PAD);
     }
 
     .hotbar > div > img {
@@ -168,7 +246,8 @@
 
     .hotbar > div > div:nth-child(2) {
         color: white;
-        margin-top: calc(1px - var(--INV2));
+        margin-top: calc(1px - var(--INV2) * 4);
+        margin-right: calc(var(--INV2) * 3);
         text-align: right;
     }
 
@@ -179,60 +258,12 @@
         background-color: lawngreen;
     }
 
-    .actionbar {
-        position: absolute;
-        left: 50%;
-        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px);
-        translate: -50%;
-        display: flex;
-        pointer-events: none;
-        color: white;
-    }
-
-    .health {
-        position: absolute;
-        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px);
-        left: 50%;
-        translate: calc(10px - var(--INV-PAD) / 2 - var(--INV-PAD) * 4 - var(--INV2) * 8);
-        pointer-events: none;
-    }
-
-    .health > div > img {
-        width: 32px;
-        margin: -5px;
-    }
-
-    .hurt-effect {
+    .open_container {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
         height: 100%;
-        filter: dropShadow(1px 1px 1px black);
-    }
-
-    .food {
-        position: absolute;
-        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px);
-        left: 50%;
-        translate: calc(var(--INV-PAD) / 2 + var(--INV-PAD) * 4 + var(--INV2) * 8 - 190px);
-        pointer-events: none;
-    }
-
-    .food > div > img {
-        width: 32px;
-        margin: -7px;
-    }
-
-    .bubble {
-        position: absolute;
-        bottom: calc(20px + var(--INV2) * 2 + var(--INV-PAD) + 10px + 22px);
-        left: 50%;
-        translate: calc(var(--INV-PAD) / 2 + var(--INV-PAD) * 4 + var(--INV2) * 8 - 190px - 2px);
-        pointer-events: none;
-    }
-
-    .bubble > div > img {
-        width: 18px;
+        background: rgba(0, 0, 0, 0.5);
     }
 </style>

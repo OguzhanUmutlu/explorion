@@ -36,8 +36,12 @@ class FallingBlockEntity extends Entity {
         super.update(deltaTick);
         if (this.onGround) {
             this.close();
-            this.world.setBlock(this.x, this.y, this.blockId);
-            this.world.updateBlocksAround(this.x, this.y);
+            if (this.world.getBlock(this.x, this.y).isReplaceable) {
+                this.world.setBlock(this.x, this.y, this.blockId);
+                this.world.updateBlocksAround(this.x, this.y);
+            } else {
+                this.world.dropItem(this.x, this.y, new Item(this.blockId));
+            }
         }
     };
 }

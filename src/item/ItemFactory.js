@@ -22,16 +22,29 @@ const ItemIds = {
     WATER_5: 20,
     WATER_6: 21,
     WATER_7: 22,
-    WATER: 23,
-    LAVA_1: 24,
-    LAVA_2: 25,
-    LAVA_3: 26,
-    LAVA: 27,
-    FIRE: 28,
-    OAK_WOOD: 29,
-    OAK_LEAVES: 30,
-    GRASS: 31,
-    GRASS_DOUBLE: 32,
+    WATER_8: 23,
+    WATER: 24,
+    LAVA_1: 25,
+    LAVA_2: 26,
+    LAVA_3: 27,
+    LAVA_4: 28,
+    LAVA: 29,
+    FIRE: 30,
+    OAK_WOOD: 31,
+    OAK_LEAVES: 32,
+    GRASS: 33,
+    GRASS_DOUBLE: 34,
+    ALLIUM: 35,
+    BLUE_ORCHID: 36,
+    DANDELION: 37,
+    HOUSTONIA: 38,
+    ORANGE_TULIP: 39,
+    OXEYE_DAISY: 40,
+    PAEONIA: 41,
+    PINK_TULIP: 42,
+    RED_TULIP: 43,
+    ROSE: 44,
+    WHITE_TULIP: 45,
 
     APPLE: 100,
     COAL: 101,
@@ -51,9 +64,9 @@ const metadata = {
     item: [],
     phaseable: [],
     replaceable: [],
-    unbreakable: [],
-    notPlaceableOn: [],
-    notExplodeable: [],
+    breakable: [],
+    canPlaceBlockOnIt: [],
+    isExplodeable: [],
     noDropBlocks: [],
     blockDrops: {},
     edible: {[ItemIds.APPLE]: 4},
@@ -66,7 +79,10 @@ const metadata = {
     durabilities: {},
     maxStack: {},
     canFall: [],
-    canFloat: []
+    canBePlacedOn: {},
+    cannotBePlacedOn: {},
+    transparent: [],
+    canStayOnPhaseables: []
 };
 const idTextures = {};
 
@@ -78,92 +94,158 @@ const idTextures = {};
  * @param {number | 0} durability
  * @param {number | 0} maxStack
  */
-const registerItem = (
-    id, texture = 0, name = 0, edible = 0, durability = 0,
-    maxStack = 0
-) => {
+const registerItem = (id, {
+    texture = 0, name = 0, edible = 0, durability = 0, maxStack = 0
+} = {}) => {
     idTextures[id] = texture || "assets/items/" + Object.keys(ItemIds).find(k => ItemIds[k] === id).toLowerCase() + ".png";
     metadata.item.push(id);
     if (edible) metadata.edible[id] = edible;
     if (name) metadata.itemName[id] = name;
     if (durability) metadata.durabilities[id] = durability;
     if (maxStack) metadata.maxStack[id] = maxStack;
+    console.log("%cRegistered item with the ID " + id, "color: #00ff00");
 };
+
 /**
  * @param {number} id
  * @param {string | 0} texture
  * @param {string | 0} name
- * @param canFloat
- * @param canFall
- * @param isReplaceable
- * @param isPhaseable
- * @param isBreakable
- * @param isPlaceableOn
- * @param isExplodeable
+ * @param {0 | 1} isTransparent
+ * @param {number[] | 0} canBePlacedOn
+ * @param {number[]} cannotBePlacedOn
+ * @param {0 | 1} canStayOnPhaseables
+ * @param {0 | 1} canFall
+ * @param {0 | 1} isReplaceable
+ * @param {0 | 1} isPhaseable
+ * @param {0 | 1} isBreakable
+ * @param {0 | 1} canPlaceBlockOnIt
+ * @param {0 | 1} isExplodeable
  * @param {(number | [number, number])[] | 0} drops
  */
-const registerBlock = (
-    id, texture = 0, name = 0, canFloat = 1, canFall = 0,
-    isReplaceable = 0, isPhaseable = 0, isBreakable = 1, isPlaceableOn = 1,
-    isExplodeable = 1, drops = 0
-) => {
+const registerBlock = (id, {
+    texture = 0, name = 0, isTransparent = 0, canBePlacedOn = 0, cannotBePlacedOn = [],
+    canStayOnPhaseables = 0, canFall = 0, isReplaceable = 0, isPhaseable = 0,
+    isBreakable = 0, canPlaceBlockOnIt = 0, isExplodeable = 0, drops = 0
+} = {}) => {
     idTextures[id] = texture || "assets/blocks/" + Object.keys(ItemIds).find(k => ItemIds[k] === id).toLowerCase() + ".png";
     metadata.block.push(id);
     if (name) metadata.itemName[id] = name;
-    if (canFloat) metadata.canFloat.push(id);
+    if (isTransparent) metadata.transparent.push(id);
+    if (canBePlacedOn && canBePlacedOn.length) metadata.canBePlacedOn[id] = canBePlacedOn;
+    if (canStayOnPhaseables) metadata.canStayOnPhaseables.push(id);
+    if (cannotBePlacedOn) metadata.cannotBePlacedOn[id] = cannotBePlacedOn;
     if (canFall) metadata.canFall.push(id);
     if (isReplaceable) metadata.replaceable.push(id);
     if (isPhaseable) metadata.phaseable.push(id);
-    if (!isBreakable) metadata.unbreakable.push(id);
-    if (!isPlaceableOn) metadata.notPlaceableOn.push(id);
-    if (!isExplodeable) metadata.notExplodeable.push(id);
+    if (isBreakable) metadata.breakable.push(id);
+    if (canPlaceBlockOnIt) metadata.canPlaceBlockOnIt.push(id);
+    if (isExplodeable) metadata.isExplodeable.push(id);
     if (drops) metadata.blockDrops[id] = drops;
+    console.log("%cRegistered block with the ID " + id, "color: #00ff00");
 };
-//
-registerBlock(ItemIds.AIR, 0, 0, 1, 0, 1, 1, 0, 0, 0, []);
-registerBlock(ItemIds.BEDROCK, 0, 0, 1, 0, 0, 0, 0, 1, 0, []);
-registerBlock(ItemIds.COAL_ORE, 0, 0, 1, 0, 0, 0, 1, 1, 1, [ItemIds.COAL]);
-registerBlock(ItemIds.COBBLESTONE);
-registerBlock(ItemIds.DIAMOND_ORE, 0, 0, 1, 0, 0, 0, 1, 1, 1, [ItemIds.DIAMOND]);
-registerBlock(ItemIds.DIRT);
-registerBlock(ItemIds.GOLD_ORE);
-registerBlock(ItemIds.GRASS_BLOCK, 0, 0, 1, 0, 0, 0, 1, 1, 1, [ItemIds.DIRT]);
-registerBlock(ItemIds.SNOWY_GRASS_BLOCK, 0, 0, 1, 0, 0, 0, 1, 1, 1, [ItemIds.DIRT]);
-registerBlock(ItemIds.ICE, 0, 0, 1, 0, 0, 0, 1, 1, 1, []);
-registerBlock(ItemIds.PACKED_ICE);
-registerBlock(ItemIds.IRON_ORE);
-registerBlock(ItemIds.SAND, 0, 0, 1, 0, 1);
-registerBlock(ItemIds.GRAVEL, 0, 0, 1, 0, 1);
-registerBlock(ItemIds.STONE, 0, 0, 1, 0, 0, 0, 1, 1, 1, [ItemIds.COBBLESTONE]);
-registerBlock(ItemIds.TNT);
-registerBlock(ItemIds.FIRE, 0, 0, 1, 0, 1, 1, 1, 0, 1, []);
-registerBlock(ItemIds.OAK_WOOD);
-registerBlock(ItemIds.OAK_LEAVES, 0, 0, 1, 0, 0, 0, 1, 1, 1);
-registerBlock(ItemIds.GRASS, 0, 0, 0, 0, 1, 1, 1, 1, 1, [ItemIds.WHEAT_SEEDS]);
-registerBlock(ItemIds.GRASS_DOUBLE, 0, 0, 0, 0, 1, 1, 1, 1, 1, [ItemIds.WHEAT_SEEDS]);
 
-const LiquidOpts = [0, 1, 0, 1, 1, 0, 0, 0];
-registerBlock(ItemIds.WATER_1, 0, ...LiquidOpts);
-registerBlock(ItemIds.WATER_2, 0, ...LiquidOpts);
-registerBlock(ItemIds.WATER_3, 0, ...LiquidOpts);
-registerBlock(ItemIds.WATER_4, 0, ...LiquidOpts);
-registerBlock(ItemIds.WATER_5, 0, ...LiquidOpts);
-registerBlock(ItemIds.WATER_6, 0, ...LiquidOpts);
-registerBlock(ItemIds.WATER_7, 0, ...LiquidOpts);
-registerBlock(ItemIds.WATER, "assets/blocks/water_8.png", ...LiquidOpts);
-registerBlock(ItemIds.LAVA_1, 0, ...LiquidOpts);
-registerBlock(ItemIds.LAVA_2, 0, ...LiquidOpts);
-registerBlock(ItemIds.LAVA_3, 0, ...LiquidOpts);
-registerBlock(ItemIds.LAVA, "assets/blocks/lava_8.png", ...LiquidOpts);
+const blockOpts = {
+    isBreakable: 1, canPlaceBlockOnIt: 1, isExplodeable: 1, canStayOnPhaseables: 1
+};
 
-registerItem(ItemIds.APPLE, 0, 0, 4);
+registerBlock(ItemIds.AIR, {
+    isTransparent: 1, isReplaceable: 1, isPhaseable: 1, drops: [], canStayOnPhaseables: 1
+});
+registerBlock(ItemIds.BEDROCK, {
+    drops: [], canStayOnPhaseables: 1, canPlaceBlockOnIt: 1
+});
+registerBlock(ItemIds.COAL_ORE, {
+    ...blockOpts, drops: [ItemIds.COAL]
+});
+registerBlock(ItemIds.COBBLESTONE, blockOpts);
+registerBlock(ItemIds.DIAMOND_ORE, {
+    ...blockOpts, drops: [ItemIds.DIAMOND]
+});
+registerBlock(ItemIds.DIRT, blockOpts);
+registerBlock(ItemIds.GOLD_ORE, blockOpts);
+registerBlock(ItemIds.GRASS_BLOCK, {
+    ...blockOpts, drops: [ItemIds.DIRT]
+});
+registerBlock(ItemIds.SNOWY_GRASS_BLOCK, {
+    ...blockOpts, drops: [ItemIds.DIRT]
+});
+registerBlock(ItemIds.ICE, {
+    ...blockOpts, isTransparent: 1, drops: []
+});
+registerBlock(ItemIds.PACKED_ICE, {
+    ...blockOpts, isTransparent: 1
+});
+registerBlock(ItemIds.IRON_ORE, blockOpts);
+registerBlock(ItemIds.SAND, {
+    ...blockOpts, canFall: 1
+});
+registerBlock(ItemIds.GRAVEL, {
+    ...blockOpts, canFall: 1
+});
+registerBlock(ItemIds.STONE, {
+    ...blockOpts, drops: [ItemIds.COBBLESTONE]
+});
+registerBlock(ItemIds.TNT, blockOpts);
+registerBlock(ItemIds.FIRE, {
+    ...blockOpts, isTransparent: 1, canStayOnPhaseables: 0, drops: []
+});
+registerBlock(ItemIds.OAK_WOOD, blockOpts);
+registerBlock(ItemIds.OAK_LEAVES, {
+    ...blockOpts, isTransparent: 1
+});
+
+const FlowerOpts = {
+    isTransparent: 1, canBePlacedOn: [ItemIds.GRASS_BLOCK, ItemIds.SNOWY_GRASS_BLOCK, ItemIds.DIRT],
+    isPhaseable: 1, isBreakable: 1, isExplodeable: 1, canStayOnPhaseables: 0
+};
+registerBlock(ItemIds.GRASS, {
+    ...FlowerOpts, drops: [ItemIds.WHEAT_SEEDS]
+});
+registerBlock(ItemIds.GRASS_DOUBLE, {
+    ...FlowerOpts, drops: [ItemIds.WHEAT_SEEDS]
+});
+registerBlock(ItemIds.ALLIUM, FlowerOpts);
+registerBlock(ItemIds.BLUE_ORCHID, FlowerOpts);
+registerBlock(ItemIds.DANDELION, FlowerOpts);
+registerBlock(ItemIds.HOUSTONIA, FlowerOpts);
+registerBlock(ItemIds.ORANGE_TULIP, FlowerOpts);
+registerBlock(ItemIds.OXEYE_DAISY, FlowerOpts);
+registerBlock(ItemIds.PAEONIA, FlowerOpts);
+registerBlock(ItemIds.PINK_TULIP, FlowerOpts);
+registerBlock(ItemIds.RED_TULIP, FlowerOpts);
+registerBlock(ItemIds.ROSE, FlowerOpts);
+registerBlock(ItemIds.WHITE_TULIP, FlowerOpts);
+
+const LiquidOpts = {
+    isTransparent: 1, canStayOnPhaseables: 1, isReplaceable: 1, drops: [], isPhaseable: 1
+};
+registerBlock(ItemIds.WATER_1, LiquidOpts);
+registerBlock(ItemIds.WATER_2, LiquidOpts);
+registerBlock(ItemIds.WATER_3, LiquidOpts);
+registerBlock(ItemIds.WATER_4, LiquidOpts);
+registerBlock(ItemIds.WATER_5, LiquidOpts);
+registerBlock(ItemIds.WATER_6, LiquidOpts);
+registerBlock(ItemIds.WATER_7, LiquidOpts);
+registerBlock(ItemIds.WATER_8, LiquidOpts);
+registerBlock(ItemIds.WATER, {
+    ...LiquidOpts, texture: "assets/blocks/water_8.png"
+});
+registerBlock(ItemIds.LAVA_1, LiquidOpts);
+registerBlock(ItemIds.LAVA_2, LiquidOpts);
+registerBlock(ItemIds.LAVA_3, LiquidOpts);
+registerBlock(ItemIds.LAVA_4, LiquidOpts);
+registerBlock(ItemIds.LAVA, {
+    ...LiquidOpts, texture: "assets/blocks/lava_4.png"
+});
+
+registerItem(ItemIds.APPLE, {edible: 4});
+registerItem(ItemIds.RAW_BEEF, {edible: 6});
+registerItem(ItemIds.COOKED_BEEF, {edible: 8});
 registerItem(ItemIds.COAL);
-registerItem(ItemIds.COOKED_BEEF, 0, 0, 8);
 registerItem(ItemIds.DIAMOND);
 registerItem(ItemIds.FLINT);
-registerItem(ItemIds.FLINT_AND_STEEL, 0, 0, 0, 64, 1);
+registerItem(ItemIds.FLINT_AND_STEEL, {maxStack: 1, durability: 64});
 registerItem(ItemIds.GOLD_INGOT);
 registerItem(ItemIds.IRON_INGOT);
-registerItem(ItemIds.RAW_BEEF, 0, 0, 6);
 registerItem(ItemIds.WHEAT_SEEDS);
 registerItem(ItemIds.LEATHER);

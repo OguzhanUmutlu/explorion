@@ -75,16 +75,16 @@ function manhattanDistance(start, end) {
 function getNeighbors(grid, node, row, col) {
     const neighbors = [];
     if (node.x > 0 && grid[node.x - 1][node.y] !== 1) {
-        neighbors.push({ x: node.x - 1, y: node.y });
+        neighbors.push({x: node.x - 1, y: node.y});
     }
     if (node.x < row - 1 && grid[node.x + 1][node.y] !== 1) {
-        neighbors.push({ x: node.x + 1, y: node.y });
+        neighbors.push({x: node.x + 1, y: node.y});
     }
     if (node.y > 0 && grid[node.x][node.y - 1] !== 1) {
-        neighbors.push({ x: node.x, y: node.y - 1 });
+        neighbors.push({x: node.x, y: node.y - 1});
     }
     if (node.y < col - 1 && grid[node.x][node.y + 1] !== 1) {
-        neighbors.push({ x: node.x, y: node.y + 1 });
+        neighbors.push({x: node.x, y: node.y + 1});
     }
     return neighbors;
 }

@@ -10,8 +10,6 @@ const mouseDiv = document.querySelector(".mouse");
 let __uuid__ = 0;
 let pressingKeys = {};
 let pressingButtons = [false, false, false];
-let BLOCK_SIZE = 64;
-let time = 0;
 let animating = true;
 let _fps = [];
 let _tps = [];
@@ -27,6 +25,18 @@ let lastMaxHealth = 0;
 let lastActionbarId = null;
 let lastFood = 0;
 let lastBubble = 0;
+
+let BLOCK_SIZE = 64;
+let SHOW_SHADOWS = true;
+let SHOW_HITBOXES = false;
+let SHOW_COLLISIONS = false;
+
+const AssetPromise = Promise.all(PreloadAssets.map(
+    txt => [Texture, Sound].find(i => i.EXTENSIONS.includes(txt.split(".").reverse()[0])).get("assets/" + txt).wait()
+));
+const getBlockSize = () => {
+
+};
 const worlds = {};
 const overworld = new World("overworld");
 worlds.overworld = overworld;
@@ -74,7 +84,14 @@ const animate = () => {
     posDiv.innerHTML = `X: ${floatFix(player.x)}, Y: ${floatFix(player.y)}`;
     velDiv.innerHTML = `Velocity; X: ${floatFix(player.velocity.x).toFixed(2)}, Y: ${floatFix(player.velocity.y).toFixed(2)}`;
     mouseDiv.innerHTML = `Mouse; X: ${floatFix(worldMouse.x).toFixed(2)}, Y: ${floatFix(worldMouse.y).toFixed(2)};`;
+    document.querySelector(".ent").innerHTML = "Entities: " + player.world.entities.length;
+    let hours = floor(player.world.time / 500);
+    let minutes = floor((player.world.time % 500) / (12000 / 60 / 60));
+    let seconds = floor((player.world.time % 500 % (12000 / 60 / 60)) / (12000 / 60));
+    const pad = s => s.toString().padStart(2, "0");
+    document.querySelector(".tim").innerHTML = `Time: ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
     if (animating) {
+        document.querySelector(".game_top").style.backgroundColor = "rgba(0, 0, 0, " + player.world.time / 24000 + ")";
         if (lastHandIndex !== player.handIndex) {
             hotbarNodes[lastHandIndex].classList.remove("selected");
             hotbarNodes[player.handIndex].classList.add("selected");
@@ -168,14 +185,21 @@ const animate = () => {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#83f156";
         const renderBlock = (x, y, isHovering = false) => {
-            const bX = BLOCK_SIZE * (x - 1 / 2 - player.x) + canvas.width / 2;
-            const bY = BLOCK_SIZE * (-y - 1 / 2 + player.size - 1 + player.y) + canvas.height / 2;
+            //const bX = BLOCK_SIZE * (x - 1 / 2 - player.x) + canvas.width / 2;
+            //const bY = BLOCK_SIZE * (-y - 1 / 2 + player.size - 1 + player.y) + canvas.height / 2;
+            const bX = calcRenderX(x - .5);
+            const bY = calcRenderY(y + .5);
             const id = player.world.getBlockId(x, y);
-            if (id) {
-                if (!idTextures[id]) throw new Error("Invalid ID texture: " + id);
-                ctx.globalAlpha = id >= ItemIds.WATER_1 && id <= ItemIds.WATER ? 0.5 : 1;
-                ctx.drawImage(Texture.get(idTextures[id]).image, bX, bY, BLOCK_SIZE, BLOCK_SIZE);
-                ctx.globalAlpha = 1;
+            if (
+                id !== ItemIds.AIR &&
+                !isHovering
+            ) {
+                if (!SHOW_SHADOWS || new Block(x, y, id, player.world).isVisible) {
+                    if (!idTextures[id]) throw new Error("Invalid ID texture: " + id);
+                    ctx.globalAlpha = id >= ItemIds.WATER_1 && id <= ItemIds.WATER ? 0.5 : 1;
+                    ctx.drawImage(Texture.get(idTextures[id]).image, bX, bY, BLOCK_SIZE, BLOCK_SIZE);
+                    ctx.globalAlpha = 1;
+                } else ctx.drawImage(Texture.shadow(.5, BLOCK_SIZE), bX, bY, BLOCK_SIZE, BLOCK_SIZE);
             }
             ctx.strokeStyle = isHovering ? "yellow" : "";
             ctx.lineWidth = isHovering ? 3 : 1;
@@ -193,7 +217,7 @@ const animate = () => {
         const mouseEntity = player.world.entities.find(entity => entity !== player && entity instanceof Living && entity.hitboxes.some(hitbox => hitbox.collidesPoint(entity, worldMouse)));
         const hoverVector = new Vector(worldMouse.x * 1, worldMouse.y * 1).round();
         const hoverBlock = player.world.getBlock(hoverVector.x, hoverVector.y);
-        if (player.mode < 2 && !mouseEntity) {
+        if (player.mode < 2 && !mouseEntity && hoverBlock.isVisible) {
             if (
                 (hoverBlock.isBreakable || player.mode % 2 === 1) &&
                 player.distance(hoverVector) <= player.blockReach
@@ -205,12 +229,7 @@ const animate = () => {
                 hoverVector.y >= player.world.MIN_HEIGHT &&
                 hoverVector.y <= player.world.MAX_HEIGHT &&
                 player.distance(hoverVector) <= player.blockReach &&
-                (
-                    !metadata.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x, hoverVector.y + 1)) ||
-                    !metadata.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x, hoverVector.y - 1)) ||
-                    !metadata.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x + 1, hoverVector.y)) ||
-                    !metadata.notPlaceableOn.includes(player.world.getBlockId(hoverVector.x - 1, hoverVector.y))
-                )
+                [[0, 1], [0, -1], [1, 0], [-1, 0]].some(i => metadata.canPlaceBlockOnIt.includes(player.world.getBlockId(hoverVector.x + i[0], hoverVector.y + i[1])))
             ) renderBlock(hoverVector.x, hoverVector.y, true); // place
         }
         ctx.strokeStyle = "black";
@@ -245,12 +264,12 @@ setInterval(() => {
     _ups.push(Date.now());
     _ups = _ups.filter(i => i + 1000 > Date.now());
     let deltaTick = min(floor(Date.now() - lastUpdate) / (1000 / EXPECTED_TICK), 2);
+    if (deltaTick <= 0.5) return;
     const curTPS = getTPS();
     if (curTPS + deltaTick > 20) deltaTick = 20 - curTPS;
     _tps = _tps.filter(i => i[0] + 1000 > Date.now());
     _tps.push([Date.now(), deltaTick]);
     lastUpdate = Date.now();
-    time += deltaTick;
     player.world.update(deltaTick);
 
     firstTime = false;
@@ -276,10 +295,7 @@ setInterval(() => {
         const mouseEntity = player.world.entities.find(entity => entity !== player && entity instanceof Living && entity.hitboxes.some(hitbox => hitbox.collidesPoint(entity, worldMouse)));
         if (!player.holdBreak) pressingButtons[0] = false;
         if (mouseEntity) {
-            mouseEntity.attack(player, player.onGround ? 1 : 2, .4);
-            if (!player.onGround) {
-                for (let i = 0; i < 10; i++) player.world.addParticle(mouseEntity.x, mouseEntity.y, ParticleIds.CRITICAL_HIT);
-            }
+            mouseEntity.attack(player, 1); // TODO: weapons
             player.direction = mouseEntity.x < player.x ? 0 : 1;
         } else if (block.id !== ItemIds.AIR && player.mode < 2) {
             block.break(player);
@@ -296,12 +312,7 @@ setInterval(() => {
             selectedItem.id !== ItemIds.AIR && selectedItem.isBlock &&
             player.distance(block) <= player.blockReach &&
             !player.world.entities.some(entity => !(entity instanceof ItemEntity) && entity.collides(block)) &&
-            (
-                !metadata.notPlaceableOn.includes(player.world.getBlockId(block.x, block.y + 1)) ||
-                !metadata.notPlaceableOn.includes(player.world.getBlockId(block.x, block.y - 1)) ||
-                !metadata.notPlaceableOn.includes(player.world.getBlockId(block.x + 1, block.y)) ||
-                !metadata.notPlaceableOn.includes(player.world.getBlockId(block.x - 1, block.y))
-            )
+            [[0, 1], [0, -1], [1, 0], [-1, 0]].some(i => metadata.canPlaceBlockOnIt.includes(player.world.getBlockId(block.x + i[0], block.y + i[1])))
         ) {
             if (block.id === ItemIds.AIR || block.break(player)) {
                 new Block(block.x, block.y, selectedItem.id, player.world).place(player);
@@ -322,7 +333,8 @@ let lastSpace = Date.now();
 addEventListener("keydown", ev => {
     if ([..."123456789"].includes(ev.key)) player.handIndex = ev.key - 1;
     pressingKeys[ev.key.toLowerCase()] = true;
-    if (ev.key.toLowerCase() === "q") player.dropItem(player.handIndex);
+    if (ev.key.toLowerCase() === "q" && player.mode !== 3) player.dropItem(player.handIndex);
+    if (ev.key === "Ctrl") ev.preventDefault();
 });
 addEventListener("keyup", ev => {
     delete pressingKeys[ev.key.toLowerCase()];
@@ -360,10 +372,10 @@ addEventListener("contextmenu", ev => {
     ev.preventDefault();
 });
 
-texturePromise.then(() => {
+AssetPromise.then(() => {
     document.querySelector(".loading-screen").style.display = "none";
     console.clear();
-    console.log("%cLoaded all preload textures!", "font-size: 20px; color: #00ffff")
+    console.log("%cLoaded all preload textures!", "font-size: 20px; color: #00ffff");
 });
 
 addEventListener("wheel", ev => {

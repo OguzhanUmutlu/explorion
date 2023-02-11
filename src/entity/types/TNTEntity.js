@@ -56,10 +56,8 @@ class TNTEntity extends Entity {
 
     update(deltaTick) {
         super.update(deltaTick);
-        if ((this.explodeTick += deltaTick) >= 20 * 4) {
-            this.explode();
-            this.kill();
-        }
+        if ((this.explodeTick += deltaTick) >= 20 * 4) this.explode();
+        if (this.y <= this.world.MIN_HEIGHT) this.close();
     };
 
     explode() {
@@ -67,7 +65,8 @@ class TNTEntity extends Entity {
             for (let x = this.x - this.explodeRadius; x <= this.x + this.explodeRadius; x++) {
                 for (let y = this.y - this.explodeRadius; y <= this.y + this.explodeRadius; y++) {
                     const block = this.world.getBlock(x, y);
-                    if (this.distance(new Vector(x, y)) <= this.explodeRadius && !metadata.notExplodeable.includes(block.id)) {
+                    if (this.distance(new Vector(x, y)) <= this.explodeRadius && metadata.isExplodeable.includes(block.id)) {
+                        if (!block.isTransparent) this.world.addParticle(block.x, block.y, ParticleIds.EXPLOSION, 1.2);
                         if (block.id === ItemIds.TNT) {
                             block.world.setBlock(block.x, block.y, ItemIds.AIR);
                             block.world.updateBlocksAround(block.x, block.y);
@@ -82,5 +81,6 @@ class TNTEntity extends Entity {
             if (dist > this.damageRadius) return;
             entity.attack(this, (this.damageRadius - dist) / this.damageRadius * this.maxDamage);
         });
+        this.close();
     };
 }

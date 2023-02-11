@@ -1,5 +1,5 @@
 class Inventory {
-    /*** @type {{id: number, count: number, nbt: Object}[]} */
+    /*** @type {({id: number, count: number, nbt: Object} | null)[]} */
     contents = [];
 
     constructor(size) {
@@ -12,9 +12,13 @@ class Inventory {
         return -1;
     };
 
-    add(item) {
+    /**
+     * @param {Item | number} item
+     * @param {number} count
+     */
+    add(item, count = (item instanceof Item ? item.count : 1)) {
+        if (typeof item === "number") item = new Item(item, count);
         if (item.id === ItemIds.AIR || !item.count) return;
-        let count = item.count;
         for (let i = 0; i < this.size; i++) {
             const c = this.contents[i];
             if (c && item.equals(c, false, true)) {
@@ -92,5 +96,9 @@ class Inventory {
         const it = this.contents[index];
         it.count -= amount;
         if (it.count <= 0) delete this.contents[index];
+    };
+
+    clear() {
+        this.contents.fill(null);
     };
 }

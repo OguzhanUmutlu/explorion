@@ -10,12 +10,26 @@ class World {
     tiles = [];
     /** @type {Particle[]} */
     particles = [];
+    ticks = 0;
+    _lastOverload = 0;
 
     /**
      * @param {string} name
      */
     constructor(name) {
         this.name = name;
+    };
+
+    get time() {
+        return this.ticks % 12000;
+    };
+
+    set time(v) {
+        this.ticks = this.ticks - this.time + v;
+    };
+
+    get days() {
+        return floor(this.ticks / 12000);
     };
 
     /**
@@ -141,6 +155,11 @@ class World {
 
     update(deltaTick) {
         const mainPlayer = player;
+        this.ticks += deltaTick;
+        if (deltaTick >= 2 && this._lastOverload + 5000 <= Date.now()) {
+            this._lastOverload = Date.now();
+            console.log("%cDid the game overload?", "color: red");
+        }
         const entities = this.entities.map(entity => [entity.x >= mainPlayer.x + renderMinX() - 64 && entity.x <= mainPlayer.x + renderMaxX() + 64, entity]);
         entities.filter(i => !i[0]).forEach(ent => {
             if (ent[1].canDespawn) if ((ent[1].despawnTick += deltaTick) > ent[1].DESPAWN_AFTER) ent[1].close();

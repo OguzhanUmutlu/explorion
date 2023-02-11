@@ -9,6 +9,7 @@ class Entity extends CollideablePosition {
     lastInWater = false;
     direction = 1;
     dead = false;
+    damageCooldown = 0;
 
     /**
      * @param {number} x
@@ -59,7 +60,7 @@ class Entity extends CollideablePosition {
     };
 
     get onGround() {
-        const groundCollision = new Collision(this.collision.x, this.collision.y - 0.001, this.collision.w, 0.1);
+        const groundCollision = new Collision(this.collision.x, this.collision.y - 0.01, this.collision.w, 0.1);
         return !!this.getBlockCollisions(1, false, [], groundCollision).length;
     };
 
@@ -97,14 +98,16 @@ class Entity extends CollideablePosition {
 
     render() {
         this.despawnTick = 0;
-        // ctx.fillRect(calcRenderX(this.x) - 3, calcRenderY(this.y) - 3, 6, 6);
-        // ctx.strokeStyle = "black";
-        // ctx.lineWidth = 1;
-        // ctx.strokeRect(
-        //     calcRenderX(this.x + this.collision.x), calcRenderY(this.y + this.collision.y),
-        //     BLOCK_SIZE * this.collision.w,
-        //     -BLOCK_SIZE * this.collision.h
-        // );
+        if (SHOW_COLLISIONS) {
+            ctx.fillRect(calcRenderX(this.x) - 3, calcRenderY(this.y) - 3, 6, 6);
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+                calcRenderX(this.x + this.collision.x), calcRenderY(this.y + this.collision.y),
+                BLOCK_SIZE * this.collision.w,
+                -BLOCK_SIZE * this.collision.h
+            );
+        }
     };
 
     /*** @param {number} deltaTick */
@@ -114,37 +117,40 @@ class Entity extends CollideablePosition {
             this.direction = this.x > this._x ? 1 : 0;
             this._x = this.x;
         }
+        const inBlock = this.getBlockCollisions(1).length;
         if (!this.isFlying) {
-            if (!this.onGround) this.velocity.y -= 0.1 * deltaTick;
-            this.velocity.y -= this.velocity.y * 0.1 * deltaTick;
+            if (!(this instanceof Living) || !this.isSwimmingUp || !this.isTouchingWater || this.world.getBlockId(this.x, this.y) === ItemIds.AIR) {
+                if (!this.onGround) this.velocity.y -= 0.1 * deltaTick;
+                this.velocity.y -= this.velocity.y * 0.1 * deltaTick;
+            }
+            if (inBlock) this.y += 1;
+            if (this.velocity.x || inBlock) {
+                const c1 = this.move(this.velocity.x * deltaTick, 0);
+                if (c1) {
+                    const oldX = this.x;
+                    this.x = c1.x + (this.velocity.x < 0 ? 1 : -1) * (c1.collision.x + c1.collision.w + this.collision.x + this.collision.w);
+                    if (this.getBlockCollisions(1).length) this.x = oldX;
+                    this.velocity.x = 0;
+                }
+            }
+            if (this.velocity.y || inBlock) {
+                const c2 = this.move(0, this.velocity.y * deltaTick);
+                if (c2) {
+                    const oldY = this.y;
+                    // TODO: Y is not being set correctly for player, example; expected: 1, got: 2
+                    // TODO: jumping doesn't work
+                    // TODO: swimming is slow
+                    this.y = c2.y + (this.velocity.y < 0 ? 1 : -1) * (c2.collision.y + c2.collision.h + this.collision.y);
+                    if (this.getBlockCollisions(1).length) this.y = oldY;
+                    //else if (this instanceof Living && this.velocity.y < 0) this.maxAirY = true;
+                    this.velocity.y = 0;
+                }
+            }
         }
         this.velocity.x -= this.velocity.x * 0.1 * deltaTick;
         if (this.y <= -128) {
             this.y = -128;
             this.velocity.y = 0;
-        }
-        const inBlock = this.getBlockCollisions(1).length;
-        if (this.velocity.x || inBlock) {
-            const c1 = this.move(this.velocity.x * deltaTick, 0);
-            if (c1) {
-                const oldX = this.x;
-                this.x = c1.x + (this.velocity.x < 0 ? 1 : -1) * (c1.collision.x + c1.collision.w + this.collision.x + this.collision.w);
-                if (this.getBlockCollisions(1).length) this.x = oldX;
-                this.velocity.x = 0;
-            }
-        }
-        if (this.velocity.y || inBlock) {
-            const c2 = this.move(0, this.velocity.y * deltaTick);
-            if (c2) {
-                if (inBlock) this.y += 1;
-                const oldY = this.y;
-                //this.y = round(this.y);
-                // TODO: Y is not being set correctly for player, example; expected: 1, got: 2
-                this.y = c2.y + (this.velocity.y < 0 ? 1 : -1) * (c2.collision.y + c2.collision.h + this.collision.y);
-                if (this.getBlockCollisions(1).length) this.y = oldY;
-                //else if (this instanceof Living && this.velocity.y < 0) this.maxAirY = true;
-                this.velocity.y = 0;
-            }
         }
         const move = this.motion.div(10);
         if (move.len >= 0.01) {
@@ -161,8 +167,9 @@ class Entity extends CollideablePosition {
     move(dx, dy) {
         const vector = new Vector(0, 0).getDirectionVectorTo(new Vector(dx, dy));
         const distance = sqrt(dx ** 2 + dy ** 2);
-        vector.mul(distance / 30);
-        for (let i = 0; i < 30; i++) {
+        const STEPS = 3;
+        vector.mul(distance / STEPS);
+        for (let i = 0; i < STEPS; i++) {
             this.add(vector);
             const block = this.getBlockCollisions(1)[0];
             if (block) {
@@ -194,19 +201,24 @@ class Entity extends CollideablePosition {
         return list;
     };
 
+    /*** @returns {Entity[]} */
+    getChunkEntities() {
+        return this.world.getChunkEntities(this.world.getChunkIdAt(this.x))
+    };
+
     /**
      * @param {Entity} byEntity
      * @param {number} damage
-     * @param {number} knockback
+     * @param {Vector} knockback
      */
-    attack(byEntity, damage, knockback = 1) {
+    attack(byEntity, damage, knockback = new Vector(.4, .4)) {
         if (
             byEntity === this ||
-            (byEntity instanceof Player ? byEntity.distance(this) > byEntity.attackReach : false)
+            (byEntity instanceof Player ? byEntity.distance(this) > byEntity.attackReach : false) ||
+            (this.constructor === Entity && this.damageCooldown > 0)
         ) return false;
-        const vec = byEntity.getDirectionVectorTo(this);
-        vec.y += 1;
-        this.velocity.set(vec.mul(knockback));
+        this.velocity.x = (this.x > byEntity.x ? 1 : -1) * knockback.x;
+        this.velocity.y = .4 * knockback.y;
         return true;
     };
 

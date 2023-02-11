@@ -43,24 +43,44 @@ class ItemEntity extends Entity {
         this.timer++;
         if (this.onGround) this.velocity.set(new Vector(0, 0));
         if (this.selectedPlayer && !this.selectedPlayer.exists) this.selectedPlayer = null;
-        if (!this.selectedPlayer && this.timer >= 40) {
-            /*** @type {Player[]} */
-            const p = this.world.entities.filter(entity =>
+        if (!this.selectedPlayer && this.timer >= 20) {
+            /*** @type {Player} */
+            const p = this.world.entities.find(entity =>
                 !entity.dead &&
                 entity instanceof Player &&
+                entity.mode !== 3 &&
                 this.collision.collides(entity.collision.clone().expand(6, 1), this, entity) &&
                 entity.inventory.canAdd(this.item)
             );
-            if (p.length) {
-                this.selectedPlayer = p[floor(random() * p.length)];
+            if (p) {
+                this.selectedPlayer = p;
                 this.selectedPlayer._boundedItems.push(this);
                 this.timer = 0;
-                this.velocity.set(this.getDirectionVectorTo(this.selectedPlayer).div(10));
+                this.isFlying = true;
             }
         }
-        if (this.selectedPlayer && this.timer >= 20) {
+        if (this.selectedPlayer && this.timer >= 10) {
             this.selectedPlayer.inventory.add(this.item);
             this.kill();
+        }
+        if (!this.selectedPlayer) {
+            /*** @type {ItemEntity} */
+            const i = this.world.entities.find(entity =>
+                entity !== this &&
+                !entity.dead &&
+                entity instanceof ItemEntity &&
+                entity.item.id === this.item.id &&
+                this.item.maxCount <= entity.item.count + this.item.count &&
+                this.collision.collides(entity.collision.clone().expand(8, 8), this, entity)
+            );
+            if (i) {
+                this.close();
+                i.item.count += this.item.count;
+                this.item.count = 0;
+            }
+        } else if (this.distance(this.selectedPlayer) > 0.1) {
+            this.x += (this.selectedPlayer.x - this.x) / 5;
+            this.y += (this.selectedPlayer.y - this.y) / 5;
         }
     };
 

@@ -14,10 +14,26 @@ class Living extends Entity {
     inventory = new Inventory(0);
     isSwimmingUp = false;
     wasGround = false;
-    lastDamage = 0;
     realMovementSpeed = .2;
     fireTicks = 0;
     fireDamageTicks = 0;
+    _health = 20;
+
+    get health() {
+        return this._health;
+    };
+
+    set health(v) {
+        if (!this.invincible) {
+            if (this.health > v) this.damageCooldown = 10;
+            this._health = v;
+        }
+        if (this._health > this.maxHealth) this._health = this.maxHealth;
+        if (this._health <= 0) {
+            this._health = 0;
+            this.kill();
+        }
+    };
 
     /*** @return {Object} */
     get DEFAULT_NBT() {
@@ -31,24 +47,6 @@ class Living extends Entity {
         def.jumpVelocity = 0.6;
         def.inventory = [];
         return def;
-    };
-
-    _health = 20;
-
-    get health() {
-        return this._health;
-    };
-
-    set health(v) {
-        if (!this.invincible) {
-            if (this.health > v) this.lastDamage = Date.now();
-            this._health = v;
-        }
-        if (this._health > this.maxHealth) this._health = this.maxHealth;
-        if (this._health <= 0) {
-            this._health = 0;
-            this.kill();
-        }
     };
 
     /*** @return {Item[]} */
@@ -99,8 +97,18 @@ class Living extends Entity {
         this.velocity.y = this.jumpVelocity;
     };
 
-    attack(byEntity, damage, knockback) {
+    /**
+     * @param {Entity} byEntity
+     * @param {number} damage
+     * @param {Vector} knockback
+     * @returns {boolean}
+     */
+    attack(byEntity, damage, knockback = new Vector(.4, .4)) {
         if (!super.attack(byEntity, damage, knockback)) return false;
+        if (byEntity instanceof Player && byEntity.velocity.y < 0 && !byEntity.isTouchingWater && !byEntity.isFlying) {
+            for (let i = 0; i < 10; i++) this.world.addParticle(this.x, this.y, ParticleIds.CRITICAL_HIT);
+            damage *= 2;
+        }
         this.health -= damage;
         return true;
     };
@@ -111,6 +119,8 @@ class Living extends Entity {
 
     update(deltaTick) {
         super.update(deltaTick);
+        this.damageCooldown -= deltaTick;
+        if (this.damageCooldown < 0) this.damageCooldown = 0;
         if (this.y < -10) this.health -= 0.5 * deltaTick;
         if (this.isUnderwater) {
             this.waterTicks += deltaTick;
@@ -127,13 +137,13 @@ class Living extends Entity {
             if (this.waterTicks <= 0) this.waterTicks = 0;
             this.waterDamageTicks = 0;
         }
-        const isTouchingWater = this.isTouchingWater && this.world.getBlock(this.x, this.y).id;
+        const isTouchingWater = this.isTouchingWater && this.world.getBlockId(this.x, this.y);
+        if (isTouchingWater) this.maxAirY = this.y;
         if (this.lastInWater && !isTouchingWater) this.velocity.y = .5;
         this.lastInWater = isTouchingWater;
         this.realMovementSpeed = isTouchingWater ? this.movementSpeed / 2 : this.movementSpeed;
         if (!this.isFlying && isTouchingWater)
             this.velocity.y = this.isSwimmingUp ? .1 : -.1;
-
         if (this.fireTicks < 0) this.fireTicks = 0;
         if (this.fireTicks > 20 * 10) this.fireTicks = 20 * 10;
         if (this.fireDamageTicks <= 0) this.fireDamageTicks = 0;
@@ -157,17 +167,19 @@ class Living extends Entity {
 
     render() {
         super.render();
-        // const isHovering = this.hitboxes.some(c => c.collidesPoint(this, worldMouse)) && this !== player && player.distance(this) <= player.attackReach;
-        // ctx.strokeStyle = isHovering ? "red" : "green";
-        // ctx.lineWidth = isHovering ? 3 : 1;
-        // this.hitboxes.forEach(hitbox => {
-        //     ctx.strokeRect(
-        //         calcRenderX(this.x + hitbox.x), calcRenderY(this.y + hitbox.y),
-        //         BLOCK_SIZE * hitbox.w,
-        //         -BLOCK_SIZE * hitbox.h
-        //     );
-        // });
-        if (this.lastDamage + 300 <= Date.now()) return;
+        if (SHOW_HITBOXES) {
+            const isHovering = this.hitboxes.some(c => c.collidesPoint(this, worldMouse)) && this !== player && player.distance(this) <= player.attackReach;
+            ctx.strokeStyle = isHovering ? "red" : "green";
+            ctx.lineWidth = isHovering ? 3 : 1;
+            this.hitboxes.forEach(hitbox => {
+                ctx.strokeRect(
+                    calcRenderX(this.x + hitbox.x), calcRenderY(this.y + hitbox.y),
+                    BLOCK_SIZE * hitbox.w,
+                    -BLOCK_SIZE * hitbox.h
+                );
+            });
+        }
+        if (!this.damageCooldown) return;
         ctx.globalAlpha = .5;
         this.hitboxes.forEach(hitbox => {
             ctx.fillStyle = "red";

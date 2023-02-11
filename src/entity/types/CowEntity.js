@@ -1,11 +1,14 @@
 class CowEntity extends Mob {
     static DEF_COLLISION = new Collision(-.45, -.45, .9, .9);
-
+    behaviors = [
+        new EscapeWhenHitBehavior(this)
+    ];
     DESPAWN_AFTER = 20 * 10;
     TYPE = EntityIds.COW;
     _health = 10;
     maxHealth = 10;
     movementSpeed = 0.01;
+    skin = "assets/entities/cow.png";
 
     /*** @return {Object} */
     get DEFAULT_NBT() {
@@ -35,7 +38,7 @@ class CowEntity extends Mob {
     };
 
     render() {
-        const skin = Texture.get("assets/entities/cow.png");
+        const skin = Texture.get(this.skin);
         const size = 1.3;
         ctx.drawImage(
             this.direction ? skin.image : skin.flip(),

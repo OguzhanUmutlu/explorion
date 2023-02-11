@@ -12,17 +12,20 @@ class Block extends CollideablePosition {
         this.updateCollision();
     };
 
-    /*** @return {Item[]} */
-    get drops() {
+    /**
+     * @param {Item | null} item
+     * @return {Item[]}
+     */
+    getDrops(item = null) {
         if (metadata.noDropBlocks.includes(this.id)) return [];
         if (this.id === ItemIds.OAK_LEAVES) return random() < .9 ? [] : [new Item(ItemIds.APPLE)];
-        else if (this.id === ItemIds.GRAVEL) return [new Item(random() > .5 ? ItemIds.GRAVEL : ItemIds.FLINT)];
+        else if (this.id === ItemIds.GRAVEL) return [new Item(random() > .2 ? ItemIds.GRAVEL : ItemIds.FLINT)];
         return (metadata.blockDrops[this.id] || [this.id])
             .map(i => typeof i === "number" ? new Item(i) : new Item(i[0], i[1]));
     };
 
     get isBreakable() {
-        return !metadata.unbreakable.includes(this.id);
+        return metadata.breakable.includes(this.id);
     };
 
     get isLiquid() {
@@ -42,8 +45,24 @@ class Block extends CollideablePosition {
         return metadata.canFall.includes(this.id);
     };
 
-    get canFloat() {
-        return metadata.canFloat.includes(this.id);
+    get cannotBePlacedOn() {
+        return metadata.cannotBePlacedOn[this.id] || [];
+    };
+
+    get canBePlacedOn() {
+        return metadata.canBePlacedOn[this.id] || null;
+    };
+
+    get isTransparent() {
+        return metadata.transparent.includes(this.id);
+    };
+
+    get canStayOnPhaseables() {
+        return metadata.canStayOnPhaseables.includes(this.id);
+    };
+
+    get isVisible() {
+        return [[0, 1], [0, -1], [1, 0], [-1, 0]].some(i => this.world.getBlock(this.x + i[0], this.y + i[1]).isTransparent);
     };
 
     updateCollision() {
@@ -51,49 +70,55 @@ class Block extends CollideablePosition {
     };
 
     update() {
+        const downId = this.world.getBlockId(this.x, this.y - 1);
         if (this.id <= ItemIds.WATER && this.id >= ItemIds.WATER_1) {
-            const downId = this.world.getBlockId(this.x, this.y - 1);
+            const nextId = this.id === ItemIds.WATER ? ItemIds.WATER_7 : this.id - 1;
             if (downId <= ItemIds.WATER_7 && downId >= ItemIds.WATER_1) {
-                this.world.setBlock(this.x, this.y - 1, ItemIds.WATER);
+                this.world.setBlock(this.x, this.y - 1, ItemIds.WATER_8);
                 this.world.updateBlocksAround(this.x, this.y - 1);
             }
             if (downId === ItemIds.AIR) {
-                this.world.setBlock(this.x, this.y - 1, ItemIds.WATER);
+                this.world.setBlock(this.x, this.y - 1, ItemIds.WATER_8);
                 this.world.updateBlocksAround(this.x, this.y - 1);
-            } else if (this.id !== ItemIds.WATER_1) {
+            } else if ((downId < ItemIds.WATER_1 || downId > ItemIds.WATER || this.id === ItemIds.WATER) && this.id !== ItemIds.WATER_1) {
                 [1, -1].forEach(dx => {
-                    if (!this.world.getBlockId(this.x + dx, this.y)) {
-                        this.world.setBlock(this.x + dx, this.y, this.id - 1);
+                    const bId = this.world.getBlockId(this.x + dx, this.y);
+                    if (bId === ItemIds.AIR || (bId >= ItemIds.WATER_1 && bId <= ItemIds.WATER && bId < nextId)) {
+                        this.world.setBlock(this.x + dx, this.y, nextId);
                         this.world.updateBlocksAround(this.x + dx, this.y);
                     }
                 });
             }
         } else if (this.id <= ItemIds.LAVA && this.id >= ItemIds.LAVA_1) {
-            const downId = this.world.getBlockId(this.x, this.y - 1);
+            const nextId = this.id === ItemIds.LAVA ? ItemIds.LAVA_3 : this.id - 1;
             if (downId <= ItemIds.LAVA_3 && downId >= ItemIds.LAVA_1) {
-                this.world.setBlock(this.x, this.y - 1, ItemIds.LAVA);
+                this.world.setBlock(this.x, this.y - 1, ItemIds.LAVA_4);
                 this.world.updateBlocksAround(this.x, this.y - 1);
             }
             if (downId === ItemIds.AIR) {
-                this.world.setBlock(this.x, this.y - 1, ItemIds.LAVA);
+                this.world.setBlock(this.x, this.y - 1, ItemIds.LAVA_4);
                 this.world.updateBlocksAround(this.x, this.y - 1);
                 this.world.getBlock(this.x, this.y - 1).update(this.world);
-            } else if (this.id !== ItemIds.LAVA_1) {
+            } else if ((downId < ItemIds.LAVA_1 || downId > ItemIds.LAVA) && this.id !== ItemIds.LAVA_1) {
                 [1, -1].forEach(dx => {
-                    if (!this.world.getBlockId(this.x + dx, this.y)) {
-                        this.world.setBlock(this.x + dx, this.y, this.id - 1);
+                    const bId = this.world.getBlockId(this.x + dx, this.y);
+                    if (bId === ItemIds.AIR || (bId >= ItemIds.LAVA_1 && bId <= ItemIds.LAVA && bId < nextId)) {
+                        this.world.setBlock(this.x + dx, this.y, nextId);
                         this.world.updateBlocksAround(this.x + dx, this.y);
                     }
                 });
             }
-        } else if (!this.canFloat) {
-            const downId = this.world.getBlockId(this.x, this.y - 1);
-            if (metadata.notPlaceableOn.includes(downId)) {
-                this.world.setBlock(this.x, this.y, ItemIds.AIR);
-                this.world.updateBlocksAround(this.x, this.y);
-            }
         }
-        if (this.canFall && this.world.getBlockId(this.x, this.y - 1) === ItemIds.AIR) {
+        if (
+            (metadata.phaseable.includes(downId) && !this.canStayOnPhaseables) ||
+            this.cannotBePlacedOn.includes(downId) ||
+            (this.canBePlacedOn && !this.canBePlacedOn.includes(downId))
+        ) {
+            this.getDrops().forEach(item => this.world.dropItem(this.x, this.y, item));
+            this.world.setBlock(this.x, this.y, ItemIds.AIR);
+            this.world.updateBlocksAround(this.x, this.y);
+        }
+        if (this.canFall && metadata.phaseable.includes(downId)) {
             this.world.setBlock(this.x, this.y, ItemIds.AIR);
             this.world.updateBlocksAround(this.x, this.y);
             this.world.summonEntity(EntityIds.FALLING_BLOCK, this.x, this.y, {
@@ -108,6 +133,7 @@ class Block extends CollideablePosition {
      */
     break(entity) {
         if (this.id === ItemIds.AIR) return false;
+        if (!this.isVisible) return false;
         if (entity instanceof Player && entity.mode > 1) return false;
         if (entity instanceof Player) entity.food -= 0.05;
         if (
@@ -115,7 +141,7 @@ class Block extends CollideablePosition {
             (this.isBreakable || (entity instanceof Player && player.mode % 2 === 1))
         ) {
             if (!(entity instanceof Player) || entity.mode % 2 === 0) {
-                this.drops.forEach(item => {
+                this.getDrops(entity instanceof Player ? entity.selectedItem : null).forEach(item => {
                     entity.world.dropItem(this.x, this.y, item);
                 });
             }
@@ -126,7 +152,7 @@ class Block extends CollideablePosition {
             [
                 [0, 1], [1, 0], [0, -1], [-1, 0]
             ].forEach(([dx, dy]) => {
-                const block = this.world.getBlock(x + dx, y + dy);
+                const id = this.world.getBlockId(x + dx, y + dy);
 
             });
         };
@@ -144,6 +170,8 @@ class Block extends CollideablePosition {
      */
     place(entity) {
         if (this.id === ItemIds.AIR) return false;
+        const downId = this.world.getBlockId(this.x, this.y - 1);
+        if (this.canBePlacedOn && !this.canBePlacedOn.includes(downId)) return false;
         entity.world.setBlock(this.x, this.y, this.id);
         entity.world.updateBlocksAround(this.x, this.y);
         if (entity instanceof Player && entity.mode % 2 === 0) entity.inventory.removeSlot(entity.handIndex);

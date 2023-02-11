@@ -10,10 +10,17 @@ const calcRenderY = y => BLOCK_SIZE * -(y - player.y - player.size + 1) + canvas
 // TODO: blocks shouldn't be hovered when mouse is focused on an enemy
 // TODO: ignite TNTs when other TNTs explode
 // TODO: tiles
+// TODO: add saturation back
+
+// TODO **********************************
+
 // TODO: sounds, walking sounds, hitting sounds, breaking sounds, placing sounds
+
+// TODO **********************************
+
 /**
  * TODO
- * player.inventory.add(new Item(ItemIds.STONE));player.inventory.add(new Item(ItemIds.STONE));
+ * player.inventory.add(ItemIds.STONE);player.inventory.add(ItemIds.STONE);
  * gives two separate stone items
  */
 // TODO: sprinting and sneaking
@@ -27,3 +34,21 @@ const calcRenderY = y => BLOCK_SIZE * -(y - player.y - player.size + 1) + canvas
 // TODO: feed effect
 // TODO: regeneration effect
 // TODO: ice
+// TODO: bow
+// TODO: ladders and vines
+// TODO: horses and riding
+// TODO: Arrows shot from fully charged bows have a 25% chance of becoming "critical arrows"
+
+const updateLoadingScreen = (src, log = true) => {
+    const LIST = [...Object.values(Texture.textures), ...Object.values(Sound.sounds)];
+    const done = LIST.filter(i => i.loaded).length;
+    const all = LIST.length;
+    if (done <= all) {
+        if (log) console.log(`%c[${done}/${all}] Loaded ${src}`, "color: #00ff00");
+        /*** @type {HTMLCanvasElement} */
+        const cnv = document.querySelector(".loading-percent");
+        const ct = cnv.getContext("2d");
+        ct.fillStyle = "#00ff00";
+        ct.fillRect(0, 0, done / all * cnv.width, cnv.height);
+    }
+};

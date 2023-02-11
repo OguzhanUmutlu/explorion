@@ -10,6 +10,7 @@ class Player extends Living {
     holdEat = false;
     starveTicks = 0;
     _boundedItems = [];
+    skin = "assets/entities/steve.png";
 
     /*** @return {Object} */
     get DEFAULT_NBT() {
@@ -79,6 +80,10 @@ class Player extends Living {
 
     fixCollision() {
         this.collision = new Collision(-1 / 6, -1 / 2, 1 / 3, this.size);
+        this.hitboxes.push(
+            new Collision(-.12, -.5, .24, this.size * .74),
+            new Collision(-.25, (-.5 + this.size * .74), .5, this.size * .26),
+        );
     };
 
     kill() {
@@ -93,18 +98,20 @@ class Player extends Living {
         this.food = 30;
         this.x = rand(-32, 32);
         this.world.generateChunk(this.world.getChunkIdAt(this.x));
-        let minY = 0;
-        for (let y = this.world.MIN_HEIGHT; y <= this.world.MAX_HEIGHT + 1; y++) {
-            if (!this.world.getBlockId(this.x, y)) {
-                minY = y;
+        let maxY = 0;
+        for (let y = this.world.MAX_HEIGHT + 1; y >= this.world.MIN_HEIGHT; y--) {
+            if (this.world.getBlockId(this.x, y) !== ItemIds.AIR) {
+                maxY = y;
                 break;
             }
         }
-        this.y = minY;
+        this.y = maxY + 1;
         this.velocity.x = 0;
         this.velocity.y = 0;
         this.dead = false;
         this._boundedItems.forEach(item => item.selectedPlayer === this && (item.selectedPlayer = null));
+        this._x = this.x;
+        this.direction = 1;
     };
 
     move(dx, dy) {
@@ -116,8 +123,8 @@ class Player extends Living {
 
     update(deltaTick) {
         if (this.food > 20.001 && this.health < this.maxHealth) {
-            this.health += 0.001;
-            this.food -= 0.0003;
+            this.health += 0.005;
+            this.food -= 0.001;
         }
         if (this.food <= 0) {
             this.starveTicks += deltaTick;
@@ -130,12 +137,12 @@ class Player extends Living {
     };
 
     render() {
-        super.render();
-        const skin = Texture.get("assets/entities/steve.png");
+        const skin = Texture.get(this.skin);
         ctx.drawImage(
             this.direction ? skin.image : skin.flip(), calcRenderX(this.x + (this.direction ? -.25 : .25)), calcRenderY(this.y + this.size - .5),
             (this.direction ? 1 : -1) * skin.image.width / skin.image.height * this.size * BLOCK_SIZE, this.size * BLOCK_SIZE
         );
+        super.render();
     };
 
     dropItem(index, amount = 1) {

@@ -1,35 +1,44 @@
 class Mob extends Living {
-    running = false;
-    runningWay = null;
-    runningTimer = null;
+    moving = false;
+    movingWay = null;
+    /*** @type {Behavior[]} */
+    behaviors = [];
     isSwimmingUp = true;
 
-    /*** @return {Object} */
-    get DEFAULT_NBT() { // TODO: Fix incompatible override error
-        return super.DEFAULT_NBT;
+    init() {
+        super.init();
+        this.behaviors.forEach(b => b.init());
     };
 
-    attack(byEntity, damage, knockback) {
+    /**
+     * @param {Entity} byEntity
+     * @param {number} damage
+     * @param {Vector} knockback
+     * @returns {boolean}
+     */
+    attack(byEntity, damage, knockback = new Vector(.4, .4)) {
         if (!super.attack(byEntity, damage, knockback)) return false;
-        this.running = true;
-        this.runningWay = byEntity.x < this.x ? 1 : -1;
-        this.runningTimer = 20 * 10;
+        this.behaviors.forEach(b => b.attack(byEntity, damage, knockback));
         return true;
     };
 
     update(deltaTick) {
         super.update(deltaTick);
-        if (this.running) {
-            const dx = this.runningWay * this.movementSpeed * (this.onGround ? 1 : 1 / 2) * deltaTick;
+        this.behaviors.forEach(b => b.update(deltaTick));
+        if (this.moving) {
+            const dx = this.movingWay * this.movementSpeed * (this.onGround ? 1 : 1 / 2) * deltaTick;
             this.move(dx, 0);
             if (
                 this.onGround &&
-                !this.world.getBlock(this.x + .5 * this.runningWay, this.y).isPhaseable &&
-                this.world.getBlock(this.x + .5 * this.runningWay, this.y + 1).isPhaseable
+                !this.world.getBlock(this.x + .5 * this.movingWay, this.y).isPhaseable &&
+                this.world.getBlock(this.x + .5 * this.movingWay, this.y + 1).isPhaseable
             ) this.jump();
-            if ((this.runningTimer -= deltaTick) <= 0) {
-                this.running = false;
-            }
         }
+    };
+
+    startMoving(way, behavior = null) {
+        this.moving = true;
+        this.movingWay = way;
+        this.behaviors.forEach(i => i !== behavior && i.onStopMoving());
     };
 }
