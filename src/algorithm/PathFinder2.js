@@ -69,7 +69,7 @@ function pathfinder(grid, start, end) {
 }
 
 function manhattanDistance(start, end) {
-    return Math.abs(start[0] - end[0]) + Math.abs(start[1] - end[1]);
+    return abs(start[0] - end[0]) + abs(start[1] - end[1]);
 }
 
 function getNeighbors(grid, node, row, col) {

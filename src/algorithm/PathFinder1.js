@@ -162,8 +162,8 @@
         return [];
     };
     PF.heuristics = {
-        manhattan: (p1, p2) => Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y),
-        diagonal: (p1, p2) => (Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y)) + ((Math.sqrt(2) - 2) * Math.min(Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y)))
+        manhattan: (p1, p2) => abs(p2.x - p1.x) + abs(p2.y - p1.y),
+        diagonal: (p1, p2) => (abs(p2.x - p1.x) + abs(p2.y - p1.y)) + ((sqrt(2) - 2) * min(abs(p2.x - p1.x), abs(p2.y - p1.y)))
     }
 
     function BinaryHeap(cb) {

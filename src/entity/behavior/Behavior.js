@@ -7,12 +7,8 @@ class Behavior {
     init() {
     };
 
-    /**
-     * @param {Entity} byEntity
-     * @param {number} damage
-     * @param {Vector} knockback
-     */
-    attack(byEntity, damage, knockback = new Vector(.4, .4)) {
+    /*** @param {Damage} damage */
+    attack(damage) {
     };
 
     /*** @param {number} deltaTick */

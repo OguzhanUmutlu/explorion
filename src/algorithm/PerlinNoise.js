@@ -4,8 +4,8 @@ class PerlinNoise {
     };
 
     static randomGradient() {
-        const theta = Math.random() * 2 * Math.PI;
-        return {x: Math.cos(theta), y: Math.sin(theta)};
+        const theta = random() * 2 * PI;
+        return {x:  cos(theta), y: sin(theta)};
     };
 
     static dotGridGradient(ix, iy, x, y) {

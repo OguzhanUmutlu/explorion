@@ -1,18 +1,23 @@
 class Player extends Living {
     TYPE = EntityIds.PLAYER;
-    size = 1.95;
+    size = 1.8;
     handIndex = 0;
-    inventory = new Inventory(9);
+    inventory = new Inventory(36);
+    armorInventory = new Inventory(4);
+    craftingInventory = new Inventory(4);
+    cursorInventory = new Inventory(1);
+    outputInventory = new Inventory(1); // smelting & crafting result
     blockReach = 4;
     attackReach = 3.5;
     holdBreak = false;
     holdPlace = false;
     holdEat = false;
-    starveTicks = 0;
+    container = -1;
     _boundedItems = [];
     static DEFAULT_SKIN = "assets/entities/steve.png";
 
-    /*** @return {Object} */
+    // noinspection JSCheckFunctionSignatures
+    /*** @return {Object<*, *>} */
     get DEFAULT_NBT() {
         const def = super.DEFAULT_NBT;
         def.health = 20;
@@ -81,7 +86,7 @@ class Player extends Living {
     fixCollision() {
         this.collision = new Collision(-1 / 6, -1 / 2, 1 / 3, this.size);
         this.hitboxes.push(
-            new Collision(-.12, -.5, .24, this.size * .74),
+            new Collision(-.135, -.5, .24, this.size * .74),
             new Collision(-.25, (-.5 + this.size * .74), .5, this.size * .26),
         );
     };
@@ -89,29 +94,31 @@ class Player extends Living {
     kill() {
         if (this.invincible) return this.dead = false;
         super.kill();
-        this.inventory.contents.forEach((item, i) => {
+        if (!this.world.gameRules.keepInventory) this.inventory.contents.forEach((item, i) => {
             if (!item) return;
             this.world.dropItem(this.x, this.y, new Item(item.id, item.count, item.nbt));
             delete this.inventory.contents[i];
         });
+        if (this.world.gameRules.doImmediateRespawn) this.respawn();
+        this._boundedItems.forEach(item => item.selectedPlayer === this && (item.selectedPlayer = null));
+    };
+
+    respawn() {
+        this.maxAirY = null;
+        this.fireTicks = 0;
+        this.waterTicks = 0;
         this._health = this.maxHealth;
         this.food = 30;
-        this.x = rand(-32, 32);
+        this.x = rand(-128, 128);
         this.world.generateChunk(this.world.getChunkIdAt(this.x));
-        let maxY = 0;
-        for (let y = this.world.MAX_HEIGHT + 1; y >= this.world.MIN_HEIGHT; y--) {
-            if (this.world.getBlockId(this.x, y) !== ItemIds.AIR) {
-                maxY = y;
-                break;
-            }
-        }
+        let maxY = this.world.getHighestAt(this.x);
         this.y = maxY + 1;
         this.velocity.x = 0;
         this.velocity.y = 0;
         this.dead = false;
-        this._boundedItems.forEach(item => item.selectedPlayer === this && (item.selectedPlayer = null));
         this._x = this.x;
         this.direction = 1;
+        this.checkChunk();
     };
 
     move(dx, dy) {
@@ -122,17 +129,15 @@ class Player extends Living {
     }
 
     update(deltaTick) {
-        if (this.food > 20.001 && this.health < this.maxHealth) {
+        if (this.mode % 2 === 1) {
+            this.waterTicks = 0;
+            this.fireTicks = 0;
+        }
+        if (this.world.gameRules.naturalRegeneration && this.food > 20.001 && this.health < this.maxHealth) {
             this.health += 0.005;
             this.food -= 0.001;
         }
-        if (this.food <= 0) {
-            this.starveTicks += deltaTick;
-            while (this.starveTicks >= 25) {
-                this.starveTicks -= 25;
-                if (this.health > 1) this.health -= 1;
-            }
-        } else this.starveTicks = 0;
+        if (this.food <= 0) this.attack(new StarvationDamage);
         super.update(deltaTick);
     };
 
@@ -145,13 +150,55 @@ class Player extends Living {
         super.render();
     };
 
-    dropItem(index, amount = 1) {
-        const selectedItem = this.selectedItem;
+    dropItemAt(index, amount = 1, inventory = this.inventory) {
+        const selectedItem = inventory.get(index);
         if (selectedItem.id === ItemIds.AIR) return 0;
         if (selectedItem.count < amount) amount = selectedItem.count;
-        const item = this.world.dropItem(this.x, this.y + this.size - 1, new Item(selectedItem.id, amount, selectedItem.nbt));
+        const item = this.dropItem(selectedItem, amount);
         item.velocity.x = this.direction ? .4 : -.4;
-        this.inventory.removeSlot(this.handIndex);
+        inventory.removeSlot(index, amount);
         return amount;
+    };
+
+    /**
+     * @param {Item} item
+     * @param {number} count
+     * @returns {ItemEntity}
+     */
+    dropItem(item, count = item.count) {
+        return this.world.dropItem(this.x, this.y + this.size - 1, new Item(item.id, item.count, item.nbt));
+    };
+
+    onDamage(damage) {
+        this.playSound("assets/sounds/damage/hit" + rand(1, 3) + ".ogg");
+    };
+
+    updateOutputInventory() {
+        if (this.container === ContainerIds.PLAYER_CONTAINER) {
+            const crafting = findCrafting([
+                [player.craftingInventory.get(0), player.craftingInventory.get(1), itemPlaceholder],
+                [player.craftingInventory.get(2), player.craftingInventory.get(3), itemPlaceholder],
+                [itemPlaceholder, itemPlaceholder, itemPlaceholder]
+            ]) || [[], itemPlaceholder];
+            player.outputInventory.set(0, crafting[1]);
+        } else player.outputInventory.clear();
+    };
+
+    decreaseCrafting() {
+        for (let i = 0; i < player.craftingInventory.size; i++) {
+            const item = player.craftingInventory.contents[i];
+            if (!item || item.id === ItemIds.AIR) continue;
+            item.count--;
+            if (item.count <= 0) delete player.craftingInventory.contents[i];
+        }
+        this.updateOutputInventory();
+    };
+
+    clear() {
+        this.inventory.clear();
+        this.armorInventory.clear();
+        this.cursorInventory.clear();
+        this.craftingInventory.clear();
+        this.outputInventory.clear();
     };
 }

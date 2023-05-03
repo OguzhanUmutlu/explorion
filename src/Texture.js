@@ -11,7 +11,7 @@ class Texture {
     static shadows = {};
 
     image = imagePlaceholder;
-    _flipped = null;
+    _flipped = [null, null];
 
     /**
      * @param {Promise<Image>} promise
@@ -27,22 +27,24 @@ class Texture {
         return this.image !== imagePlaceholder;
     };
 
-    static flipImage(image) {
+    static flipImage(image, way = 1) {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
         canvas.width = image.width;
         canvas.height = image.height;
         ctx.save();
         ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
+        if (way === 1) ctx.scale(-1, 1);
+        else ctx.scale(1, -1);
         ctx.drawImage(image, 0, 0);
         ctx.restore();
         return canvas;
     };
 
     static get(src) {
+        if (!src) return texturePlaceholder;
         if (Texture.textures[src]) return Texture.textures[src];
-        console.log("%cLoading " + src, "color: #ffff00");
+        const startMs = performance.now();
         if (!src) throw new Error("Invalid texture src.");
         const image = new Image;
         let resolve;
@@ -50,10 +52,10 @@ class Texture {
         image.src = src;
         image.addEventListener("load", () => {
             resolve(image);
-            updateLoadingScreen(src);
+            updateLoadingScreen(src, true, startMs);
         });
         image.addEventListener("error", () => {
-            console.log("%cFailed to load " + src, "color: #ff0000");
+            debug("%cFailed to load " + src, "color: #ff0000");
             updateLoadingScreen(src, false);
         });
         return Texture.textures[src] = new Texture(prom, src);
@@ -70,12 +72,14 @@ class Texture {
         return Texture.shadows[opacity + ";" + size] = cnv;
     };
 
-    flip() {
+    flip(way = 1) {
         if (!this.loaded) return imagePlaceholder;
-        return this._flipped = this._flipped || Texture.flipImage(this.image);
+        return this._flipped[way] = this._flipped[way] || Texture.flipImage(this.image, way);
     };
 
     async wait() {
         await this._promise;
     };
 }
+
+const texturePlaceholder = new Texture(new Promise(r => imagePlaceholder), "");

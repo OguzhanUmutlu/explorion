@@ -9,7 +9,12 @@ class Entity extends CollideablePosition {
     lastInWater = false;
     direction = 1;
     dead = false;
-    damageCooldown = 0;
+    damageCooldown = {};
+    moved = 0;
+    _nametag = "";
+    nametagVisible = "";
+    /*** @type {number | null} */
+    cacheCurrentChunk = null;
 
     /**
      * @param {number} x
@@ -24,14 +29,16 @@ class Entity extends CollideablePosition {
         this._id = __uuid__++;
     };
 
-    /*** @return {Object} */
+    /*** @return {Object<*, *>} */
     get DEFAULT_NBT() {
         return {
             type: this.TYPE,
             position: [0, 0, ""],
             motion: [0, 0],
             velocity: [0, 0],
-            isFlying: false
+            isFlying: false,
+            nametag: "",
+            nametagVisible: false
         };
     };
 
@@ -39,15 +46,19 @@ class Entity extends CollideablePosition {
         return this._id;
     };
 
+    get nametag() {
+        return this.name;
+    };
+
     get name() {
-        return metadata.entityName[this.id] || metadata.entityName.other(this.id);
+        return metadata.entityName[this.TYPE] || metadata.entityName.other(this.TYPE);
     }
 
     get canDespawn() {
         return !(this instanceof Player);
     };
 
-    get isExposedToAir() {
+    get isExposedToAir() { // TODO: make it so it caches this kinds of stuff like, cacheCurrentTick = tick, and reset this every tick: cacheObj = {}
         return !!this.getBlockCollisions(1, true, [0]).length;
     };
 
@@ -56,7 +67,9 @@ class Entity extends CollideablePosition {
     };
 
     get isUnderwater() {
-        return !this.isInSolidBlock && !this.isExposedToAir;
+        const cl = this.getBlockCollisions(1, true)[0];
+        return cl && cl.isLiquid && !this.isExposedToAir;
+        //return !this.isInSolidBlock && !this.isExposedToAir;
     };
 
     get onGround() {
@@ -65,6 +78,14 @@ class Entity extends CollideablePosition {
     };
 
     get isTouchingWater() {
+        return !!this.getBlockCollisions(1, true, [ItemIds.WATER])[0];
+    };
+
+    get isTouchingLava() {
+        return !!this.getBlockCollisions(1, true, [ItemIds.LAVA])[0];
+    };
+
+    get isTouchingLiquid() {
         return this.getBlockCollisions(null, true).some(i => i.isLiquid);
     };
 
@@ -72,9 +93,27 @@ class Entity extends CollideablePosition {
         return !this.dead && this.world && this.world.entities.includes(this);
     };
 
+    checkChunk() {
+        if (this.cacheCurrentChunk !== null && this.dead) {
+            const ch = this.world.getChunkActualAt(this.cacheCurrentChunk);
+            if (ch) ch[1].splice(ch[1].indexOf(this), 1);
+            this.cacheCurrentChunk = null;
+            return;
+        }
+        if (this.cacheCurrentChunk === null || this.world.getChunkIdAt(this.x) !== this.cacheCurrentChunk || !this.world.getChunkAt(this.x, true)[1].includes(this)) {
+            if (this.cacheCurrentChunk !== null) {
+                const ch = this.world.getChunkActualAt(this.cacheCurrentChunk);
+                if (ch) ch[1].splice(ch[1].indexOf(this), 1);
+            }
+            this.cacheCurrentChunk = this.world.getChunkIdAt(this.x);
+            this.world.getChunkAt(this.x, true)[1].push(this);
+        }
+    };
+
     init() {
         this.loadNBT();
         this._x = this.x;
+        this.checkChunk();
     };
 
     saveNBT() {
@@ -83,6 +122,8 @@ class Entity extends CollideablePosition {
         this.nbt.motion = [this.motion.x, this.motion.y];
         this.nbt.velocity = [this.velocity.x, this.velocity.y];
         this.nbt.isFlying = this.isFlying * 1;
+        this.nbt.nametag = this._nametag;
+        this.nbt.nametagVisible = this.nametagVisible;
     };
 
     loadNBT() {
@@ -94,6 +135,8 @@ class Entity extends CollideablePosition {
         this.motion = new Vector(...this.nbt.motion);
         this.velocity = new Vector(...this.nbt.velocity);
         this.isFlying = Boolean(this.nbt.isFlying);
+        this._nametag = this.nbt.nametag;
+        this.nametagVisible = this.nbt.nametagVisible;
     };
 
     render() {
@@ -117,9 +160,10 @@ class Entity extends CollideablePosition {
             this.direction = this.x > this._x ? 1 : 0;
             this._x = this.x;
         }
+        if (this.y < -10) this.attack(new VoidDamage);
         const inBlock = this.getBlockCollisions(1).length;
         if (!this.isFlying) {
-            if (!(this instanceof Living) || !this.isSwimmingUp || !this.isTouchingWater || this.world.getBlockId(this.x, this.y) === ItemIds.AIR) {
+            if (!(this instanceof Living) || !this.isSwimmingUp || !this.isTouchingLiquid || this.world.getBlockId(this.x, this.y) === ItemIds.AIR) {
                 if (!this.onGround) this.velocity.y -= 0.1 * deltaTick;
                 this.velocity.y -= this.velocity.y * 0.1 * deltaTick;
             }
@@ -146,6 +190,15 @@ class Entity extends CollideablePosition {
                     this.velocity.y = 0;
                 }
             }
+            if (this.moved > 1) {
+                this.moved -= 1;
+                if (this.moved < 0) this.moved = 0;
+                const block = this.world.getBlock(this.x, this.y - 1);
+                if (!block.isPhaseable) {
+                    const sound = block.stepSound;
+                    if (sound) this.playSound(sound);
+                }
+            }
         }
         this.velocity.x -= this.velocity.x * 0.1 * deltaTick;
         if (this.y <= -128) {
@@ -157,6 +210,10 @@ class Entity extends CollideablePosition {
             this.move(move.x, move.y);
         }
         this.motion.mul(9);
+        this.checkChunk();
+    };
+
+    updateRandomly() {
     };
 
     /**
@@ -165,6 +222,7 @@ class Entity extends CollideablePosition {
      * @return {Block | null}
      */
     move(dx, dy) {
+        const stx = this.x;
         const vector = new Vector(0, 0).getDirectionVectorTo(new Vector(dx, dy));
         const distance = sqrt(dx ** 2 + dy ** 2);
         const STEPS = 3;
@@ -177,6 +235,9 @@ class Entity extends CollideablePosition {
                 return block;
             }
         }
+        let d = this.x - stx;
+        if ((this.moved < 0 && d > 0) || (this.moved > 0 && d < 0)) this.moved = 0;
+        this.moved += d;
         return null;
     };
 
@@ -206,29 +267,29 @@ class Entity extends CollideablePosition {
         return this.world.getChunkEntities(this.world.getChunkIdAt(this.x))
     };
 
-    /**
-     * @param {Entity} byEntity
-     * @param {number} damage
-     * @param {Vector} knockback
-     */
-    attack(byEntity, damage, knockback = new Vector(.4, .4)) {
-        if (
-            byEntity === this ||
-            (byEntity instanceof Player ? byEntity.distance(this) > byEntity.attackReach : false) ||
-            (this.constructor === Entity && this.damageCooldown > 0)
-        ) return false;
-        this.velocity.x = (this.x > byEntity.x ? 1 : -1) * knockback.x;
-        this.velocity.y = .4 * knockback.y;
+    /*** @param {Damage} damage */
+    attack(damage) {
+        if (this.dead) return false;
+        if (this.damageCooldown[damage.TYPE]) return false;
+        if (damage.amount <= 0) return false;
+        if (damage instanceof AttackDamage && damage.entity instanceof Player &&
+            damage.entity.distance(this) > damage.entity.attackReach) return false;
+        if (damage instanceof AttackDamage && damage.entity instanceof Living)
+            damage.entity.lastFight = [this.world.ticks, this];
+        this.damageCooldown[damage.TYPE] = damage.cooldown;
+        if (damage instanceof KnockbackDamage) {
+            this.velocity.x = (this.x > damage.center.x ? 1 : -1) * damage.knockback.x;
+            this.velocity.y = .4 * damage.knockback.y;
+        }
         return true;
     };
 
     kill() {
-        this.dead = true;
-        if (this instanceof Player) return;
         this.close();
     };
 
     close() {
-        this.world.entities.splice(this.world.entities.indexOf(this), 1);
+        this.dead = true;
+        this.checkChunk();
     };
 }

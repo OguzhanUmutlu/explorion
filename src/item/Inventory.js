@@ -12,6 +12,11 @@ class Inventory {
         return -1;
     };
 
+    get isEmpty() {
+        for (let i = 0; i < this.size; i++) if (this.contents[i]) return false;
+        return true;
+    };
+
     /**
      * @param {Item | number} item
      * @param {number} count
@@ -29,18 +34,29 @@ class Inventory {
                     c.count = item.maxCount;
                 }
             } else if (!c) {
-                const it = this.contents[i] = {id: item.id, count, nbt: {}};
+                const nItem = new Item(item.id, count, item.nbt);
                 count = 0;
-                if (it.count > item.maxCount) {
-                    count += it.count - item.maxCount;
-                    it.count = item.maxCount;
+                if (nItem.count > item.maxCount) {
+                    count += nItem.count - item.maxCount;
+                    nItem.count = item.maxCount;
                 }
+                this.contents[i] = nItem.toJSON();
             }
             if (count === 0) break;
         }
+        return count;
     };
 
-    canAdd(item) {
+    /**
+     * @param {number} index
+     * @param {Item} item
+     */
+    set(index, item) {
+        if (item.count <= 0) return delete this.contents[index];
+        this.contents[index] = item.toJSON();
+    };
+
+    getMaxAddition(item) {
         if (item.id === ItemIds.AIR || !item.count) return true;
         let count = item.count;
         for (let i = 0; i < this.size; i++) {
@@ -52,7 +68,11 @@ class Inventory {
             }
             if (count <= 0) break;
         }
-        return count <= 0;
+        return item.count - count;
+    };
+
+    canAdd(item) {
+        return item.count <= this.getMaxAddition(item);
     };
 
     /**
@@ -102,3 +122,8 @@ class Inventory {
         this.contents.fill(null);
     };
 }
+
+const ContainerIds = {
+    NONE: -1,
+    PLAYER_CONTAINER: 0
+};

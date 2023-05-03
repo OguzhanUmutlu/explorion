@@ -1,6 +1,7 @@
 <title>Explorion</title>
 <canvas class="game"></canvas>
 <div class="game_top"></div>
+<div class="game_top_water"></div>
 <div class="info" style="display: none">
     <div class="fps"></div>
     <div class="tps"></div>
@@ -13,61 +14,90 @@
 </div>
 <div class="actionbar"></div>
 <div class="hotbar">
-    <div class="selected"><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
-    <div><img src="" draggable="false">
-        <div></div>
-        <div></div>
-    </div>
+    <div class="selected"></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
 </div>
+<div class="container-blur" style="display: none"></div>
+<div class="player-inventory" hidden>
+    <img src="assets/gui/player_inventory.png" draggable="false">
+    <div class="armors"></div>
+    <div class="inventory"></div>
+    <div class="hotbars"></div>
+    <div class="crafting-input"></div>
+    <div class="crafting-output"></div>
+</div>
+<div class="cursor-item"></div>
+<div class="hover-info" style="display: none"></div>
 <div class="health"></div>
 <div class="food"></div>
 <div class="bubble"></div>
+<div class="chat" style="display: none">
+    <div class="messages"></div>
+    <div class="chat-input"><input id="chat" spellcheck="false"></div>
+</div>
+<div class="death-screen" style="display: none">
+    <h1>You died!</h1>
+    <p></p>
+    <div class="buttons">
+        <div class="button" onclick="player.respawn()">Respawn</div>
+    </div>
+</div>
 <!--<div class="open_container">
 
 </div>-->
-<div class="loading-screen">
+<div class="loading-screen" style="display: none">
     <div>
         <canvas class="loading-percent" width="400" height="60"></canvas>
     </div>
 </div>
-<script src="src/PreloadAssets.js"></script>
+<script src="src/TextureList.js"></script>
+<script src="src/entity/damage/Damage.js"></script>
+<script src="src/entity/damage/KnockbackDamage.js"></script>
+<script src="src/entity/damage/AttackDamage.js"></script>
+<script src="src/entity/damage/MeleeDamage.js"></script>
+<script src="src/entity/damage/LightningDamage.js"></script>
+<script src="src/entity/damage/FallDamage.js"></script>
+<script src="src/entity/damage/FallingBlockDamage.js"></script>
+<script src="src/entity/damage/SuffocationDamage.js"></script>
+<script src="src/entity/damage/EntityCrammingDamage.js"></script>
+<script src="src/entity/damage/DrowningDamage.js"></script>
+<script src="src/entity/damage/StarvationDamage.js"></script>
+<script src="src/entity/damage/CactusDamage.js"></script>
+<script src="src/entity/damage/BerryBushDamage.js"></script>
+<script src="src/entity/damage/FireDamage.js"></script>
+<script src="src/entity/damage/LavaDamage.js"></script>
+<script src="src/entity/damage/BurningDamage.js"></script>
+<script src="src/entity/damage/MagmaDamage.js"></script>
+<script src="src/entity/damage/CampfireDamage.js"></script>
+<script src="src/entity/damage/PotionDamage.js"></script>
+<script src="src/entity/damage/InstantDamage.js"></script>
+<script src="src/entity/damage/PoisonDamage.js"></script>
+<script src="src/entity/damage/WitherDamage.js"></script>
+<script src="src/entity/damage/VoidDamage.js"></script>
+<script src="src/entity/damage/ExplosionDamage.js"></script>
+<script src="src/entity/damage/TNTDamage.js"></script>
+<script src="src/entity/damage/FireworkDamage.js"></script>
+<script src="src/entity/damage/FreezingDamage.js"></script>
+<script src="src/entity/damage/ThornsDamage.js"></script>
+<script src="src/entity/damage/DamageFactory.js"></script>
+<script src="src/entity/damage/IntentionalGameDesignDamage.js"></script>
 <script src="src/entity/behavior/Behavior.js"></script>
-<script src="src/entity/behavior/EscapeWhenHitBehavior.js"></script>
+<script src="src/entity/behavior/EscapeWhenDamagedBehavior.js"></script>
+<script src="src/entity/behavior/WanderAroundBehavior.js"></script>
 <script src="src/Utils.js"></script>
 <script src="src/Color.js"></script>
 <script src="src/Vector.js"></script>
 <script src="src/world/ChunkGenerator.js"></script>
+<script src="src/world/generators/DefaultGenerator.js"></script>
+<script src="src/world/generators/CustomGenerator.js"></script>
+<script src="src/world/generators/FlatGenerator.js"></script>
 <script src="src/world/World.js"></script>
 <script src="src/world/Position.js"></script>
 <script src="src/entity/Particle.js"></script>
@@ -77,9 +107,10 @@
 <script src="src/entity/Entity.js"></script>
 <script src="src/entity/Living.js"></script>
 <script src="src/entity/Mob.js"></script>
-<script src="src/item/Item.js"></script>
-<script src="src/item/Inventory.js"></script>
 <script src="src/item/ItemFactory.js"></script>
+<script src="src/item/Item.js"></script>
+<script src="src/item/CraftingManager.js"></script>
+<script src="src/item/Inventory.js"></script>
 <script src="src/Texture.js"></script>
 <script src="src/Sound.js"></script>
 <script src="src/entity/types/CowEntity.js"></script>
@@ -87,8 +118,11 @@
 <script src="src/entity/types/ItemEntity.js"></script>
 <script src="src/entity/types/FallingBlockEntity.js"></script>
 <script src="src/entity/types/Player.js"></script>
-<script src="src/entity/Tile.js"></script>
+<script src="src/command/CommandManager.js"></script>
+<script src="src/tile/Tile.js"></script>
+<script src="src/tile/FireTile.js"></script>
 <script src="src/entity/EntityFactory.js"></script>
+<script src="src/tile/TileFactory.js"></script>
 <script src="src/algorithm/PerlinNoise.js"></script>
 <script src="src/Main.js"></script>
 <style>
@@ -134,6 +168,16 @@
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.5);
+    }
+
+    .game_top_water {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        transition: backdrop-filter .5s, background-color .5s;
     }
 
     .game {
@@ -224,6 +268,7 @@
         translate: -50%;
         display: flex;
         pointer-events: none;
+        max-height: var(--INV-PAD);
     }
 
     .hotbar > .selected {
@@ -256,14 +301,253 @@
         margin-top: calc(1px - var(--INV2));
         text-align: right;
         background-color: lawngreen;
+        margin-left: 20%;
+        margin-right: 21%;
+        height: 3%;
     }
 
-    .open_container {
+    .player-inventory {
+        position: absolute;
+        left: 50%;
+        top: calc(50% - 50px);
+        translate: -50% -50%;
+        width: 40%;
+    }
+
+    .player-inventory > img {
+        width: 100%;
+    }
+
+    .player-inventory > div > div:hover {
+        outline: 3px solid white;
+        background: #00a800;
+    }
+
+    .player-inventory > .armors {
+        position: absolute;
+        left: 4.5%;
+        top: 4.5%;
+        width: 9%;
+        height: 43.5%;
+    }
+
+    .player-inventory > .armors > div {
+        width: 100%;
+        height: 23.3%;
+        margin-bottom: 6.6%;
+        cursor: grab;
+    }
+
+    .player-inventory > .crafting-input {
+        position: absolute;
+        left: 50%;
+        top: 15.5%;
+        width: 25%;
+        height: 20%;
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .player-inventory > .crafting-input > div {
+        width: 36%;
+        height: 50%;
+        margin-bottom: 2%;
+        margin-right: 4%;
+        cursor: grab;
+    }
+
+    .player-inventory > .crafting-output {
+        position: absolute;
+        left: 81.5%;
+        top: 21%;
+        width: 9.5%;
+        height: 10.5%;
+    }
+
+    .player-inventory > .crafting-output > div {
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+        margin-left: 3%;
+        margin-top: 3%;
+    }
+
+    .player-inventory > .inventory {
+        position: absolute;
+        left: 4.5%;
+        top: 50.5%;
+        width: 93%;
+        height: 31.5%;
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .player-inventory > .inventory > div {
+        width: 10%;
+        height: 31%;
+        cursor: grab;
+        margin-right: 1%;
+        margin-bottom: 1%;
+    }
+
+    .player-inventory > .hotbars {
+        position: absolute;
+        left: 4.5%;
+        top: 85%;
+        width: 93%;
+        height: 10%;
+        display: flex;
+    }
+
+    .player-inventory > .hotbars > div {
+        width: 10%;
+        height: 100%;
+        margin-top: 0.5%;
+        margin-right: 1%;
+        cursor: grab;
+    }
+
+    .container-blur {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(5px);
+    }
+
+    .item > img {
+        width: 70%;
+        height: 70%;
+        margin-left: 13%;
+        margin-top: 13%;
+    }
+
+    .item > div:nth-child(2) {
+        color: white;
+        margin-top: calc(1px - var(--INV2) * 4);
+        margin-right: calc(var(--INV2) * 3);
+        text-align: right;
+    }
+
+    .item > div:nth-child(3) {
+        color: red;
+        margin-top: calc(1px - var(--INV2));
+        text-align: right;
+        background-color: lawngreen;
+        margin-left: 20%;
+        margin-right: 21%;
+        height: 3%;
+    }
+
+    .chat {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 45%;
+        height: 60%;
+        background: rgba(100, 100, 100, 0.5);
+        color: white;
+    }
+
+    .chat > .messages {
+        overflow-x: hidden;
+        overflow-y: auto;
+        height: 100%;
+        max-height: 100%;
+    }
+
+    .chat > .messages > div {
+        user-select: text;
+        word-wrap: anywhere;
+    }
+
+    .chat > .chat-input {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        min-width: 100%;
+        height: 30px;
+        background: rgba(170, 170, 170, 0.8);
+    }
+
+    .chat > .chat-input > input {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        outline: none;
+        background: transparent;
+        color: white;
+        font-family: monospace, serif;
+        font-size: 14px;
+    }
+
+    .death-screen {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 50, 50, 0.5);
+        color: white;
+        backdrop-filter: blur(5px);
+        text-align: center;
+        justify-content: center;
+    }
+
+    .death-screen > h1 {
+        margin-top: 100px;
+        font-size: 100px;
+        text-align: center;
+        margin-left: 20px;
+    }
+
+    .death-screen > p {
+        margin-top: -50px;
+    }
+
+    .death-screen > .buttons {
+        display: flex;
+        margin-top: 20px;
+        justify-content: center;
+    }
+
+    .button {
+        width: 400px;
+        height: 40px;
+        font-size: 28px;
+        background: url("assets/gui/button.png");
+        background-size: 400px 40px;
+        cursor: pointer;
+    }
+
+    .button:hover {
+        background: url("assets/gui/button_hover.png");
+        background-size: 400px 40px;
+    }
+
+    .button:disabled {
+        background: url("assets/gui/button_disabled.png") !important;
+        background-size: 400px 40px;
+    }
+
+    .cursor-item {
+        position: absolute;
+        pointer-events: none;
+        width: 64px;
+        margin-left: -12px;
+        margin-top: -12px;
+    }
+
+    .hover-info {
+        position: absolute;
+        pointer-events: none;
+        background: black;
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        margin-top: -40px;
     }
 </style>

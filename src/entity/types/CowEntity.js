@@ -1,13 +1,20 @@
+// noinspection JSCheckFunctionSignatures
+
 class CowEntity extends Mob {
     static DEF_COLLISION = new Collision(-.45, -.45, .9, .9);
+    static HEADS = [
+        new Collision(.48, .45, .3, .4),
+        new Collision(-.78, .45, .3, .4)
+    ];
     static DEF_HITBOXES = [
-        new Collision(0, .45, .3, .4), // head
+        CowEntity.HEADS[0], // head
         new Collision(-.47, .15, .94, .6), // body
         new Collision(-.47, -.45, .21, .6), // left leg
         new Collision(.26, -.45, .21, .6) // right leg
     ];
     behaviors = [
-        new EscapeWhenHitBehavior(this)
+        new EscapeWhenDamagedBehavior(this),
+        new WanderAroundBehavior(this)
     ];
     DESPAWN_AFTER = 20 * 10;
     TYPE = EntityIds.COW;
@@ -16,7 +23,7 @@ class CowEntity extends Mob {
     movementSpeed = 0.01;
     static DEFAULT_SKIN = "assets/entities/cow.png";
 
-    /*** @return {Object} */
+    /*** @return {Object<*, *>} */
     get DEFAULT_NBT() {
         const def = super.DEFAULT_NBT;
         def.health = 10;
@@ -51,6 +58,6 @@ class CowEntity extends Mob {
 
     update(deltaTick) {
         super.update(deltaTick);
-        this.hitboxes[0].x = this.direction ? .48 : -.78;
+        this.hitboxes[0] = CowEntity.HEADS[1 - this.direction];
     };
 }

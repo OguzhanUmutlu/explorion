@@ -1,10 +1,19 @@
 class Item {
+    /**
+     * @param {number} id
+     * @param {number} count
+     * @param {Object} nbt
+     */
     constructor(id, count = 1, nbt = {}) {
         this._id = id;
         if (isNaN(count) || count < 0 || floor(count) !== count) throw new Error("Expected a positive integer for the count of the item. Found: " + JSON.stringify(count));
         this.count = count;
         this.nbt = nbt;
         if (!this.nbt.damage) this.nbt.damage = 0;
+    };
+
+    get maxDurability() {
+        return metadata.durabilities[this.id] || -1;
     };
 
     get maxCount() {
@@ -28,8 +37,20 @@ class Item {
     };
 
     get name() {
-        return metadata.itemName[this.id] || metadata.itemName.other(this.id);
-    }
+        const n = metadata.itemName[this.id] || metadata.itemName.other(this.id);
+        if (typeof n === "string") return n;
+        return n[this.nbt.damage];
+    };
+
+    /*** @returns {Texture} */
+    get texture() {
+        if (this.isBlock) return Block.getTexture(this.id, this.nbt.damage);
+        return Texture.get(idTextures[this.id]);
+    };
+
+    get isArmor() {
+        return metadata.armors.includes(this.id);
+    };
 
     /*** @param {Entity} entity */
     use(entity) {
@@ -48,12 +69,25 @@ class Item {
      * @return {boolean}
      */
     equals(item, count = false, nbt = false) {
-        return item.id === this.id && (!count || item.count === this.count) && (!nbt || JSON.stringify(item.nbt) === JSON.stringify(this.nbt));
+        if (item.id !== this.id) return false;
+        if (count && item.count !== this.count) return false;
+        return !(nbt && JSON.stringify(item.nbt) !== JSON.stringify(this.nbt));
+
     };
 
     clone() {
         return new Item(this.id, this.count, this.nbt);
     };
+
+    toJSON() {
+        return {
+            id: this.id,
+            count: this.count,
+            //nbt: JSON.parse(JSON.stringify(this.nbt))
+            nbt: {...this.nbt}
+        };
+    };
 }
 
 const itemPlaceholder = new Item(0, 0);
+const itemPlaceholderJSON = new Item(0, 0).toJSON();
