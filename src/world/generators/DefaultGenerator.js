@@ -3,7 +3,17 @@ class DefaultGenerator extends ChunkGenerator {
         const {setBlock, getBlock, addTile, addEntity} = super.generate(chunk, chunkX);
         const worldX = chunkX * 16;
         //const pY = round((PerlinNoise.perlin(worldX + x, 0.1) + 1) * 100);
-        const getPY = x => sin((worldX + x) / 10) * 10 + 60;
+        const getPY = x => {
+            const a = (worldX + x) / 10;
+            return (
+                sin(4 * a + 5) +
+                sin(2 * a + 2) +
+                sin(3 * a + 3) +
+                sin(5 * a + 16) +
+                sin(8 * a + 3) +
+                sin(10 * a + 1)
+            ) / 6 * 10 + 60;
+        };
         //const pY = floor((sin(chunkX * 1000) + 5) / 2 * sin(PI * x / 16) / (3 * PI / 2) * 32 + 30);
         //const pY = seed(worldX + x)() * 100;
         //const pY = chunkX + 20;
